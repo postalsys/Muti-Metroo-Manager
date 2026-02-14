@@ -1,0 +1,135 @@
+export interface Stats {
+  peer_count: number;
+  stream_count: number;
+}
+
+export interface AgentInfo {
+  id: string;
+  short_id: string;
+  display_name: string;
+}
+
+export interface DashboardRouteInfo {
+  network: string;
+  route_type: string;
+  origin: string;
+  origin_id: string;
+  hop_count: number;
+  udp: boolean;
+  path_ids: string[];
+}
+
+export interface DashboardPortForwardRouteInfo {
+  key: string;
+  ingress_agent: string;
+  ingress_agent_id: string;
+  listener_address: string;
+  exit_agent: string;
+  exit_agent_id: string;
+  target: string;
+  hop_count: number;
+  path_ids: string[];
+}
+
+export interface DashboardResponse {
+  agent: AgentInfo;
+  stats: Stats;
+  routes: DashboardRouteInfo[] | null;
+  forward_routes: DashboardPortForwardRouteInfo[] | null;
+}
+
+export interface TopologyAgentInfo {
+  id: string;
+  short_id: string;
+  display_name: string;
+  is_local: boolean;
+  is_connected: boolean;
+  roles: string[];
+  hostname: string;
+  os: string;
+  arch: string;
+  version: string;
+  uptime_hours: number;
+  ip_addresses: string[];
+  socks5_addr: string;
+  udp_enabled: boolean;
+  exit_routes: string[];
+  domain_routes: string[];
+  forward_listeners: string[];
+  forward_endpoints: string[];
+}
+
+export interface TopologyConnection {
+  from_agent: string;
+  to_agent: string;
+  is_direct: boolean;
+  transport: string;
+  rtt_ms: number;
+  unresponsive: boolean;
+}
+
+export interface TopologyResponse {
+  agents: TopologyAgentInfo[];
+  connections: TopologyConnection[];
+}
+
+export interface MeshTestResult {
+  short_id: string;
+  display_name: string;
+  reachable: boolean;
+  is_local: boolean;
+  response_time_ms: number;
+  error: string;
+}
+
+export interface MeshTestResponse {
+  results: MeshTestResult[];
+  timestamp: string;
+}
+
+// --- Agent management types ---
+
+export interface SleepStatusResponse {
+  state: 'AWAKE' | 'SLEEPING' | 'POLLING';
+  enabled: boolean;
+}
+
+export interface RouteManageRequest {
+  action: 'add' | 'remove' | 'list';
+  network?: string;
+  metric?: number;
+}
+
+export interface RouteManageResponse {
+  status: string;
+  routes?: { network: string; metric: number }[];
+  message?: string;
+}
+
+export interface AgentCapabilities {
+  shell: boolean | null;
+  fileTransfer: boolean | null;
+}
+
+// Shell binary protocol message types
+export const MSG_META    = 0x01;
+export const MSG_STDIN   = 0x02;
+export const MSG_STDOUT  = 0x03;
+export const MSG_STDERR  = 0x04;
+export const MSG_RESIZE  = 0x05;
+export const MSG_ACK     = 0x06;
+export const MSG_EXIT    = 0x07;
+export const MSG_SIGNAL  = 0x08;
+export const MSG_ERROR   = 0x09;
+
+// Shell error codes
+export const ERR_SHELL_DISABLED        = 20;
+export const ERR_FILE_TRANSFER_DENIED  = 12;
+
+export interface ShellMeta {
+  command?: string;
+  args?: string[];
+  rows: number;
+  cols: number;
+  term?: string;
+}
