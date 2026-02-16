@@ -185,6 +185,7 @@ export default function App() {
           meshResult={selectedMeshResult}
           capabilities={selectedCapabilities}
           onCapabilityUpdate={handleCapabilityUpdate}
+          onRoutesChanged={refresh}
           onClose={handleClosePanel}
         />
       )}

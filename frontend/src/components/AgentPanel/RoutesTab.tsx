@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { TopologyAgentInfo } from '../../api/types';
 import { manageAgentRoutes } from '../../api/client';
 
 interface RoutesTabProps {
   agent: TopologyAgentInfo;
+  onRoutesChanged: () => void;
 }
 
 interface RouteEntry {
@@ -11,7 +12,7 @@ interface RouteEntry {
   metric: number;
 }
 
-export default function RoutesTab({ agent }: RoutesTabProps) {
+export default function RoutesTab({ agent, onRoutesChanged }: RoutesTabProps) {
   const [routes, setRoutes] = useState<RouteEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [unreachable, setUnreachable] = useState(false);
@@ -58,12 +59,13 @@ export default function RoutesTab({ agent }: RoutesTabProps) {
       setSuccess(`Added route ${newCidr.trim()}`);
       setNewCidr('');
       await fetchRoutes();
+      onRoutesChanged();
     } catch (err: any) {
       setError(err.message || 'Failed to add route');
     } finally {
       setActionLoading(false);
     }
-  }, [agent.id, newCidr, newMetric, fetchRoutes]);
+  }, [agent.id, newCidr, newMetric, fetchRoutes, onRoutesChanged]);
 
   const handleRemove = useCallback(async (network: string) => {
     setActionLoading(true);
@@ -73,12 +75,19 @@ export default function RoutesTab({ agent }: RoutesTabProps) {
       await manageAgentRoutes(agent.id, { action: 'remove', network });
       setSuccess(`Removed route ${network}`);
       await fetchRoutes();
+      onRoutesChanged();
     } catch (err: any) {
       setError(err.message || 'Failed to remove route');
     } finally {
       setActionLoading(false);
     }
-  }, [agent.id, fetchRoutes]);
+  }, [agent.id, fetchRoutes, onRoutesChanged]);
+
+  // Compute static routes: exit_routes that are NOT in the dynamic route list
+  const staticRoutes = useMemo(() => {
+    const dynamicNetworks = new Set(routes.map(r => r.network));
+    return (agent.exit_routes || []).filter(cidr => !dynamicNetworks.has(cidr));
+  }, [routes, agent.exit_routes]);
 
   // When agent is unreachable, show static route info from topology
   if (unreachable) {
@@ -93,8 +102,9 @@ export default function RoutesTab({ agent }: RoutesTabProps) {
             <div className="routes-static-header">Advertised exit routes (read-only)</div>
             <div className="routes-list">
               {exitRoutes.map(cidr => (
-                <div key={cidr} className="routes-list-item">
+                <div key={cidr} className="routes-list-item routes-list-item-static">
                   <span className="routes-network">{cidr}</span>
+                  <span className="routes-badge-static">static</span>
                 </div>
               ))}
             </div>
@@ -103,6 +113,8 @@ export default function RoutesTab({ agent }: RoutesTabProps) {
       </div>
     );
   }
+
+  const hasAnyRoutes = routes.length > 0 || staticRoutes.length > 0;
 
   return (
     <div className="routes-tab">
@@ -135,7 +147,7 @@ export default function RoutesTab({ agent }: RoutesTabProps) {
       {/* Routes list */}
       {loading ? (
         <div className="tab-loading">Loading routes...</div>
-      ) : routes.length === 0 ? (
+      ) : !hasAnyRoutes ? (
         <div className="tab-empty">No routes configured</div>
       ) : (
         <div className="routes-list">
@@ -150,6 +162,12 @@ export default function RoutesTab({ agent }: RoutesTabProps) {
               >
                 Remove
               </button>
+            </div>
+          ))}
+          {staticRoutes.map(cidr => (
+            <div key={cidr} className="routes-list-item routes-list-item-static">
+              <span className="routes-network">{cidr}</span>
+              <span className="routes-badge-static">static</span>
             </div>
           ))}
         </div>
