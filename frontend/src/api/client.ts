@@ -74,12 +74,10 @@ export async function uploadFile(
   agentId: string,
   file: File,
   remotePath: string,
-  chmod?: string,
 ): Promise<{ status: string; message?: string }> {
   const form = new FormData();
   form.append('file', file);
   form.append('path', remotePath);
-  if (chmod) form.append('chmod', chmod);
 
   const resp = await fetch(`${BASE}/api/proxy/agents/${agentId}/file/upload`, {
     method: 'POST',

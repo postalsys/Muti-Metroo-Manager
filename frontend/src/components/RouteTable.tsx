@@ -38,10 +38,10 @@ export default function RouteTable({ routes, onHighlight, onClearHighlight }: Ro
                   </td>
                   <td title={route.origin_id}>{route.origin}</td>
                   <td className="proto-cell">
-                    <span className="proto-badge proto-tcp">TCP</span>
+                    {route.tcp && <span className="proto-badge proto-tcp">TCP</span>}
                     {route.udp && <span className="proto-badge proto-udp">UDP</span>}
                   </td>
-                  <td>{route.hop_count}</td>
+                  <td title={route.path_display?.join(' → ') || ''}>{route.hop_count}</td>
                 </tr>
               ))
             )}

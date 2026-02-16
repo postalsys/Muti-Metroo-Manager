@@ -37,7 +37,7 @@ export default function ForwardRouteTable({ routes, onHighlight, onClearHighligh
                 <td><code>{route.listener_address || '-'}</code></td>
                 <td title={route.exit_agent_id}>{route.exit_agent}</td>
                 <td><code>{route.target || '-'}</code></td>
-                <td>{route.hop_count}</td>
+                <td title={route.path_display?.join(' → ') || ''}>{route.hop_count}</td>
               </tr>
             ))}
           </tbody>

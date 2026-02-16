@@ -18,7 +18,6 @@ export default function FilesTab({ agent, disabled, onDisabled }: FilesTabProps)
 
   // Upload state
   const [uploadRemotePath, setUploadRemotePath] = useState('');
-  const [uploadChmod, setUploadChmod] = useState('');
   const [uploadFile_, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -62,7 +61,7 @@ export default function FilesTab({ agent, disabled, onDisabled }: FilesTabProps)
     setUploadError(null);
     setUploadSuccess(null);
     try {
-      await uploadFile(agent.id, uploadFile_, uploadRemotePath.trim(), uploadChmod || undefined);
+      await uploadFile(agent.id, uploadFile_, uploadRemotePath.trim());
       setUploadSuccess(`Uploaded to ${uploadRemotePath.trim()}`);
       setUploadFile(null);
     } catch (err: any) {
@@ -71,7 +70,7 @@ export default function FilesTab({ agent, disabled, onDisabled }: FilesTabProps)
     } finally {
       setUploading(false);
     }
-  }, [agent.id, uploadFile_, uploadRemotePath, uploadChmod, checkFileTransferDenied]);
+  }, [agent.id, uploadFile_, uploadRemotePath, checkFileTransferDenied]);
 
   if (disabled) {
     return (
@@ -118,13 +117,6 @@ export default function FilesTab({ agent, disabled, onDisabled }: FilesTabProps)
             placeholder="Remote path (e.g. /tmp/file.txt)"
             value={uploadRemotePath}
             onChange={e => setUploadRemotePath(e.target.value)}
-          />
-          <input
-            type="text"
-            className="panel-input panel-input-small"
-            placeholder="chmod (e.g. 0644)"
-            value={uploadChmod}
-            onChange={e => setUploadChmod(e.target.value)}
           />
           <button
             className="panel-btn"

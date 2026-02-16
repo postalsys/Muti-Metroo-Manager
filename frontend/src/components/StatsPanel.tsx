@@ -19,9 +19,25 @@ export default function StatsPanel({ stats, routes }: StatsPanelProps) {
         <div className="stat-label">Streams</div>
       </div>
       <div className="stat-card">
+        <div className="stat-value">{stats?.route_count ?? '-'}</div>
+        <div className="stat-label">Routes</div>
+      </div>
+      <div className="stat-card">
         <div className="stat-value">{exitNodes.size || '-'}</div>
         <div className="stat-label">Exit Nodes</div>
       </div>
+      {stats?.socks5_running && (
+        <div className="stat-card stat-card-active">
+          <div className="stat-value">ON</div>
+          <div className="stat-label">SOCKS5</div>
+        </div>
+      )}
+      {stats?.exit_handler_running && (
+        <div className="stat-card stat-card-active">
+          <div className="stat-value">ON</div>
+          <div className="stat-label">Exit Handler</div>
+        </div>
+      )}
     </section>
   );
 }

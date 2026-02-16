@@ -1,7 +1,7 @@
-import type { AgentInfo, SleepStatusResponse } from '../api/types';
+import type { TopologyAgentInfo, SleepStatusResponse } from '../api/types';
 
 interface HeaderProps {
-  agent: AgentInfo | null;
+  agent: TopologyAgentInfo | null;
   sleepStatus: SleepStatusResponse | null;
   onSleep: () => void;
   onWake: () => void;

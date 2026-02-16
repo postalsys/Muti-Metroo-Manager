@@ -1,12 +1,9 @@
 export interface Stats {
   peer_count: number;
   stream_count: number;
-}
-
-export interface AgentInfo {
-  id: string;
-  short_id: string;
-  display_name: string;
+  route_count: number;
+  socks5_running: boolean;
+  exit_handler_running: boolean;
 }
 
 export interface DashboardRouteInfo {
@@ -15,6 +12,8 @@ export interface DashboardRouteInfo {
   origin: string;
   origin_id: string;
   hop_count: number;
+  path_display: string[];
+  tcp: boolean;
   udp: boolean;
   path_ids: string[];
 }
@@ -28,13 +27,38 @@ export interface DashboardPortForwardRouteInfo {
   exit_agent_id: string;
   target: string;
   hop_count: number;
+  path_display: string[];
   path_ids: string[];
 }
 
+export interface DashboardPeerInfo {
+  id: string;
+  short_id: string;
+  display_name: string;
+  state: string;
+  rtt_ms: number;
+  unresponsive: boolean;
+  is_dialer: boolean;
+}
+
+export interface DashboardDomainRouteInfo {
+  pattern: string;
+  is_wildcard: boolean;
+  origin: string;
+  origin_id: string;
+  hop_count: number;
+  path_display: string[];
+  path_ids: string[];
+  tcp: boolean;
+  udp: boolean;
+}
+
 export interface DashboardResponse {
-  agent: AgentInfo;
+  agent: TopologyAgentInfo;
   stats: Stats;
+  peers: DashboardPeerInfo[] | null;
   routes: DashboardRouteInfo[] | null;
+  domain_routes: DashboardDomainRouteInfo[] | null;
   forward_routes: DashboardPortForwardRouteInfo[] | null;
 }
 
@@ -69,11 +93,13 @@ export interface TopologyConnection {
 }
 
 export interface TopologyResponse {
+  local_agent: TopologyAgentInfo;
   agents: TopologyAgentInfo[];
   connections: TopologyConnection[];
 }
 
 export interface MeshTestResult {
+  agent_id: string;
   short_id: string;
   display_name: string;
   reachable: boolean;
@@ -83,8 +109,12 @@ export interface MeshTestResult {
 }
 
 export interface MeshTestResponse {
+  local_agent: string;
+  test_time: string;
+  duration_ms: number;
+  total_count: number;
+  reachable_count: number;
   results: MeshTestResult[];
-  timestamp: string;
 }
 
 // --- Agent management types ---
