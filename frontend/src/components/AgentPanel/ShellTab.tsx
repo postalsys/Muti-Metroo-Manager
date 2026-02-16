@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
+import '@xterm/xterm/css/xterm.css';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
-import type { TopologyAgentInfo } from '../../api/types';
+import type { TopologyAgentInfo, ShellMeta } from '../../api/types';
 import {
   MSG_META, MSG_STDIN, MSG_STDOUT, MSG_STDERR,
   MSG_RESIZE, MSG_ACK, MSG_EXIT, MSG_ERROR,
@@ -24,11 +25,15 @@ function encodeShellFrame(msgType: number, payload: Uint8Array): ArrayBuffer {
   return buf;
 }
 
-function encodeMetaFrame(meta: Record<string, unknown>): ArrayBuffer {
+function encodeMetaFrame(meta: ShellMeta): ArrayBuffer {
   const json = JSON.stringify(meta);
   const encoder = new TextEncoder();
   return encodeShellFrame(MSG_META, encoder.encode(json));
 }
+
+// Matches xterm.js auto-responses to terminal queries (CPR, DA1, DA2, DSR).
+// Intercepted in onData to prevent echo loops with remote PTYs.
+const TERM_AUTO_RESPONSE = /^\x1b\[[\?>]?[\d;]*[Rcn]$/;
 
 function encodeResizeFrame(rows: number, cols: number): ArrayBuffer {
   // Backend expects 4 raw bytes: rows (uint16 BE) + cols (uint16 BE)
@@ -83,16 +88,38 @@ export default function ShellTab({ agent, disabled, onDisabled }: ShellTabProps)
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
 
-    // Connect WebSocket
     const wsURL = getShellWebSocketURL(agent.id);
     const ws = new WebSocket(wsURL);
     ws.binaryType = 'arraybuffer';
     wsRef.current = ws;
 
+    const sendStdin = (data: string) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        const encoder = new TextEncoder();
+        ws.send(encodeShellFrame(MSG_STDIN, encoder.encode(data)));
+      }
+    };
+
+    // Suppress terminal query auto-responses at the parser level to prevent
+    // echo loops with remote BusyBox PTYs that have echo enabled.
+    // DSR (ESC[6n]) is proxied via sendStdin for screen dimension detection.
+    // DA1/DA2 are fully suppressed (unused by BusyBox).
+    terminal.parser.registerCsiHandler({ final: 'n' }, (params) => {
+      if (params[0] === 6 && connectedRef.current) {
+        const row = terminal.buffer.active.cursorY + 1;
+        const col = terminal.buffer.active.cursorX + 1;
+        sendStdin(`\x1b[${row};${col}R`);
+      }
+      return true;
+    });
+    terminal.parser.registerCsiHandler({ final: 'c' }, () => true);
+    terminal.parser.registerCsiHandler({ prefix: '>', final: 'c' }, () => true);
+    // Suppress CPR echo -- discard ESC[row;colR echoed back by the PTY.
+    terminal.parser.registerCsiHandler({ final: 'R' }, () => true);
+
     ws.onopen = () => {
-      // Send META frame with command and TTY dimensions
       const dims = fitAddon.proposeDimensions();
-      const meta = {
+      const meta: ShellMeta = {
         command: 'sh',
         tty: {
           rows: dims?.rows ?? 24,
@@ -104,7 +131,6 @@ export default function ShellTab({ agent, disabled, onDisabled }: ShellTabProps)
     };
 
     ws.onmessage = (event: MessageEvent) => {
-      // Handle text frames (JSON error messages from agent)
       if (typeof event.data === 'string') {
         try {
           const errObj = JSON.parse(event.data);
@@ -134,6 +160,7 @@ export default function ShellTab({ agent, disabled, onDisabled }: ShellTabProps)
         case MSG_ACK:
           connectedRef.current = true;
           setStatus('connected');
+          terminal.focus();
           break;
         case MSG_STDOUT:
         case MSG_STDERR:
@@ -169,22 +196,24 @@ export default function ShellTab({ agent, disabled, onDisabled }: ShellTabProps)
       setErrorMsg('Shell is not available on this agent');
     };
 
-    ws.onclose = (event) => {
+    ws.onclose = () => {
       if (!connectedRef.current) {
         setStatus('error');
         setErrorMsg('Shell is not available on this agent');
+      } else {
+        setStatus('ended');
+        terminal.write('\r\n\x1b[33m[Connection lost]\x1b[0m\r\n');
       }
     };
 
-    // Terminal input → WebSocket (only when connected)
+    // Forward user input to the remote shell, filtering out xterm.js
+    // auto-responses to terminal queries to prevent echo-back garbage.
     const dataDisposable = terminal.onData((data: string) => {
-      if (ws.readyState === WebSocket.OPEN && connectedRef.current) {
-        const encoder = new TextEncoder();
-        ws.send(encodeShellFrame(MSG_STDIN, encoder.encode(data)));
+      if (connectedRef.current && !TERM_AUTO_RESPONSE.test(data)) {
+        sendStdin(data);
       }
     });
 
-    // Resize handling
     const resizeObserver = new ResizeObserver(() => {
       fitAddon.fit();
       const dims = fitAddon.proposeDimensions();
@@ -205,7 +234,7 @@ export default function ShellTab({ agent, disabled, onDisabled }: ShellTabProps)
       wsRef.current = null;
       fitAddonRef.current = null;
     };
-  }, [agent.id, disabled]);
+  }, [agent.id, disabled, onDisabled]);
 
   if (disabled) {
     return (

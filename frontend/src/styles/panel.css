@@ -410,6 +410,10 @@ main.panel-open {
   padding: 4px;
 }
 
+.shell-terminal .xterm-helper-textarea {
+  opacity: 0 !important;
+}
+
 /* --- Files Tab --- */
 .files-tab {
   display: flex;
