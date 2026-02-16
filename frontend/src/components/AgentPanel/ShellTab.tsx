@@ -234,7 +234,10 @@ export default function ShellTab({ agent, disabled, onDisabled }: ShellTabProps)
       wsRef.current = null;
       fitAddonRef.current = null;
     };
-  }, [agent.id, disabled, onDisabled]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- onDisabled is intentionally
+  // excluded: it's an inline arrow in the parent and would cause the effect to re-run
+  // on every poll cycle, tearing down and recreating the WebSocket every 5s.
+  }, [agent.id, disabled]);
 
   if (disabled) {
     return (
