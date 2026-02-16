@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
-import type { TopologyAgentInfo, ShellMeta } from '../../api/types';
+import type { TopologyAgentInfo } from '../../api/types';
 import {
   MSG_META, MSG_STDIN, MSG_STDOUT, MSG_STDERR,
   MSG_RESIZE, MSG_ACK, MSG_EXIT, MSG_ERROR,
@@ -24,16 +24,19 @@ function encodeShellFrame(msgType: number, payload: Uint8Array): ArrayBuffer {
   return buf;
 }
 
-function encodeMetaFrame(meta: ShellMeta): ArrayBuffer {
+function encodeMetaFrame(meta: Record<string, unknown>): ArrayBuffer {
   const json = JSON.stringify(meta);
   const encoder = new TextEncoder();
   return encodeShellFrame(MSG_META, encoder.encode(json));
 }
 
 function encodeResizeFrame(rows: number, cols: number): ArrayBuffer {
-  const json = JSON.stringify({ rows, cols });
-  const encoder = new TextEncoder();
-  return encodeShellFrame(MSG_RESIZE, encoder.encode(json));
+  // Backend expects 4 raw bytes: rows (uint16 BE) + cols (uint16 BE)
+  const payload = new Uint8Array(4);
+  const dv = new DataView(payload.buffer);
+  dv.setUint16(0, rows, false);
+  dv.setUint16(2, cols, false);
+  return encodeShellFrame(MSG_RESIZE, payload);
 }
 
 export default function ShellTab({ agent, disabled, onDisabled }: ShellTabProps) {
@@ -87,12 +90,15 @@ export default function ShellTab({ agent, disabled, onDisabled }: ShellTabProps)
     wsRef.current = ws;
 
     ws.onopen = () => {
-      // Send META frame with TTY dimensions
+      // Send META frame with command and TTY dimensions
       const dims = fitAddon.proposeDimensions();
-      const meta: ShellMeta = {
-        rows: dims?.rows ?? 24,
-        cols: dims?.cols ?? 80,
-        term: 'xterm-256color',
+      const meta = {
+        command: 'sh',
+        tty: {
+          rows: dims?.rows ?? 24,
+          cols: dims?.cols ?? 80,
+          term: 'xterm-256color',
+        },
       };
       ws.send(encodeMetaFrame(meta));
     };

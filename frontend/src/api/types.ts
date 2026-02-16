@@ -141,25 +141,29 @@ export interface AgentCapabilities {
   fileTransfer: boolean | null;
 }
 
-// Shell binary protocol message types
+// Shell binary protocol message types (must match internal/shell/messages.go)
 export const MSG_META    = 0x01;
-export const MSG_STDIN   = 0x02;
-export const MSG_STDOUT  = 0x03;
-export const MSG_STDERR  = 0x04;
-export const MSG_RESIZE  = 0x05;
-export const MSG_ACK     = 0x06;
-export const MSG_EXIT    = 0x07;
-export const MSG_SIGNAL  = 0x08;
+export const MSG_ACK     = 0x02;
+export const MSG_STDIN   = 0x03;
+export const MSG_STDOUT  = 0x04;
+export const MSG_STDERR  = 0x05;
+export const MSG_RESIZE  = 0x06;
+export const MSG_SIGNAL  = 0x07;
+export const MSG_EXIT    = 0x08;
 export const MSG_ERROR   = 0x09;
 
 // Shell error codes
 export const ERR_SHELL_DISABLED        = 20;
 export const ERR_FILE_TRANSFER_DENIED  = 12;
 
-export interface ShellMeta {
-  command?: string;
-  args?: string[];
+export interface ShellTTYSettings {
   rows: number;
   cols: number;
   term?: string;
+}
+
+export interface ShellMeta {
+  command: string;
+  args?: string[];
+  tty?: ShellTTYSettings;
 }
