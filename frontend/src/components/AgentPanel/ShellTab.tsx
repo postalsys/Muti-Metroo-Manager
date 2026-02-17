@@ -52,20 +52,17 @@ export default function ShellTab({ agent, disabled, onDisabled }: ShellTabProps)
   const connectedRef = useRef(false);
   const [status, setStatus] = useState<'connecting' | 'connected' | 'ended' | 'error'>('connecting');
   const [errorMsg, setErrorMsg] = useState('');
-  const [selectedShell, setSelectedShell] = useState<string>(agent.shells?.[0] ?? 'sh');
+  const [activeShell, setActiveShell] = useState<string | null>(null);
+  const prevAgentId = useRef(agent.id);
 
-  // Stable string key for the shells array — avoids re-running the effect on every
-  // poll cycle due to fresh array references from JSON deserialization.
-  const shellsKey = agent.shells?.join(',') ?? '';
-
-  // Reset selected shell when switching agents or when available shells change
-  useEffect(() => {
-    setSelectedShell(agent.shells?.[0] ?? 'sh');
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- shellsKey is the stable proxy for agent.shells
-  }, [agent.id, shellsKey]);
+  // Reset to picker when switching agents
+  if (agent.id !== prevAgentId.current) {
+    prevAgentId.current = agent.id;
+    setActiveShell(null);
+  }
 
   useEffect(() => {
-    if (disabled || !termRef.current) return;
+    if (disabled || !activeShell || !termRef.current) return;
 
     connectedRef.current = false;
 
@@ -131,7 +128,7 @@ export default function ShellTab({ agent, disabled, onDisabled }: ShellTabProps)
     ws.onopen = () => {
       const dims = fitAddon.proposeDimensions();
       const meta: ShellMeta = {
-        command: selectedShell,
+        command: activeShell,
         tty: {
           rows: dims?.rows ?? 24,
           cols: dims?.cols ?? 80,
@@ -248,7 +245,7 @@ export default function ShellTab({ agent, disabled, onDisabled }: ShellTabProps)
   // eslint-disable-next-line react-hooks/exhaustive-deps -- onDisabled is intentionally
   // excluded: it's an inline arrow in the parent and would cause the effect to re-run
   // on every poll cycle, tearing down and recreating the WebSocket every 5s.
-  }, [agent.id, disabled, selectedShell]);
+  }, [agent.id, disabled, activeShell]);
 
   if (disabled) {
     return (
@@ -258,7 +255,7 @@ export default function ShellTab({ agent, disabled, onDisabled }: ShellTabProps)
     );
   }
 
-  if (status === 'error') {
+  if (status === 'error' && activeShell !== null) {
     return (
       <div className="tab-disabled-msg">
         {errorMsg}
@@ -266,6 +263,37 @@ export default function ShellTab({ agent, disabled, onDisabled }: ShellTabProps)
     );
   }
 
+  const shells = agent.shells?.length ? agent.shells : ['sh'];
+
+  // Shell picker — shown when no shell is active
+  if (activeShell === null) {
+    return (
+      <div className="shell-tab">
+        <div className="shell-picker-overlay">
+          <div className="shell-picker-modal">
+            <div className="shell-picker-title">Select Shell</div>
+            <div className="shell-picker-list">
+              {shells.map((s) => (
+                <button
+                  key={s}
+                  className="shell-picker-btn"
+                  onClick={() => {
+                    setStatus('connecting');
+                    setErrorMsg('');
+                    setActiveShell(s);
+                  }}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Active session
   let statusLabel: ReactNode;
   switch (status) {
     case 'connecting':
@@ -278,24 +306,13 @@ export default function ShellTab({ agent, disabled, onDisabled }: ShellTabProps)
       statusLabel = <span className="shell-status-ended">Session ended</span>;
   }
 
-  const showShellSelector = agent.shells != null && agent.shells.length > 1;
-
   return (
     <div className="shell-tab">
       <div className="shell-status">
         {statusLabel}
-        {showShellSelector && (
-          <select
-            className="shell-select"
-            value={selectedShell}
-            onChange={(e) => setSelectedShell(e.target.value)}
-            disabled={status === 'connecting'}
-          >
-            {agent.shells!.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        )}
+        <button className="shell-close-btn" onClick={() => setActiveShell(null)}>
+          Close Shell
+        </button>
       </div>
       <div className="shell-terminal" ref={termRef} />
     </div>

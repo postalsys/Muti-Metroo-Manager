@@ -397,26 +397,72 @@ main.panel-open {
   flex-shrink: 0;
 }
 
-.shell-select {
-  background: var(--bg-primary);
-  color: var(--text-primary);
+/* Shell picker overlay — covers the shell-tab area */
+.shell-picker-overlay {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+}
+
+.shell-picker-modal {
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 3px;
-  padding: 0.15rem 0.4rem;
+  border-radius: 8px;
+  padding: 1.25rem;
+  min-width: 200px;
+  text-align: center;
+}
+
+.shell-picker-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.75rem;
+}
+
+.shell-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.shell-picker-btn {
+  background: rgba(218, 160, 84, 0.1);
+  border: 1px solid rgba(218, 160, 84, 0.3);
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  color: var(--accent-primary);
   font-family: 'Courier New', monospace;
-  font-size: 0.7rem;
-  outline: none;
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: background 0.15s;
 }
 
-.shell-select:focus {
-  border-color: var(--accent-primary);
+.shell-picker-btn:hover {
+  background: rgba(218, 160, 84, 0.25);
 }
 
-.shell-select:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+/* Close shell button in status bar */
+.shell-close-btn {
+  background: rgba(207, 102, 121, 0.15);
+  border: 1px solid rgba(207, 102, 121, 0.4);
+  border-radius: 3px;
+  padding: 0.15rem 0.5rem;
+  color: var(--error);
+  font-size: 0.65rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.shell-close-btn:hover {
+  background: rgba(207, 102, 121, 0.3);
 }
 
 .shell-status-connecting { color: var(--warning); }
