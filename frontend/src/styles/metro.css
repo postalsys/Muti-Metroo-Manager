@@ -161,7 +161,7 @@
     flex-wrap: wrap;
 }
 
-.station-tooltip .tooltip-role-badge {
+.tooltip-role-badge {
     padding: 0.15rem 0.5rem;
     border-radius: 3px;
     font-size: 0.7rem;

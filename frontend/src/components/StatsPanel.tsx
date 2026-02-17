@@ -19,10 +19,6 @@ export default function StatsPanel({ stats, routes }: StatsPanelProps) {
         <div className="stat-label">Streams</div>
       </div>
       <div className="stat-card">
-        <div className="stat-value">{stats?.route_count ?? '-'}</div>
-        <div className="stat-label">Routes</div>
-      </div>
-      <div className="stat-card">
         <div className="stat-value">{exitNodes.size || '-'}</div>
         <div className="stat-label">Exit Nodes</div>
       </div>
