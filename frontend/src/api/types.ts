@@ -81,6 +81,7 @@ export interface TopologyAgentInfo {
   domain_routes: string[];
   forward_listeners: string[];
   forward_endpoints: string[];
+  shells?: string[];
 }
 
 export interface TopologyConnection {

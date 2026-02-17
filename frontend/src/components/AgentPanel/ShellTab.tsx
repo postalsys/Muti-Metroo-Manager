@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 import { FitAddon } from '@xterm/addon-fit';
@@ -52,6 +52,17 @@ export default function ShellTab({ agent, disabled, onDisabled }: ShellTabProps)
   const connectedRef = useRef(false);
   const [status, setStatus] = useState<'connecting' | 'connected' | 'ended' | 'error'>('connecting');
   const [errorMsg, setErrorMsg] = useState('');
+  const [selectedShell, setSelectedShell] = useState<string>(agent.shells?.[0] ?? 'sh');
+
+  // Stable string key for the shells array — avoids re-running the effect on every
+  // poll cycle due to fresh array references from JSON deserialization.
+  const shellsKey = agent.shells?.join(',') ?? '';
+
+  // Reset selected shell when switching agents or when available shells change
+  useEffect(() => {
+    setSelectedShell(agent.shells?.[0] ?? 'sh');
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- shellsKey is the stable proxy for agent.shells
+  }, [agent.id, shellsKey]);
 
   useEffect(() => {
     if (disabled || !termRef.current) return;
@@ -120,7 +131,7 @@ export default function ShellTab({ agent, disabled, onDisabled }: ShellTabProps)
     ws.onopen = () => {
       const dims = fitAddon.proposeDimensions();
       const meta: ShellMeta = {
-        command: 'sh',
+        command: selectedShell,
         tty: {
           rows: dims?.rows ?? 24,
           cols: dims?.cols ?? 80,
@@ -237,7 +248,7 @@ export default function ShellTab({ agent, disabled, onDisabled }: ShellTabProps)
   // eslint-disable-next-line react-hooks/exhaustive-deps -- onDisabled is intentionally
   // excluded: it's an inline arrow in the parent and would cause the effect to re-run
   // on every poll cycle, tearing down and recreating the WebSocket every 5s.
-  }, [agent.id, disabled]);
+  }, [agent.id, disabled, selectedShell]);
 
   if (disabled) {
     return (
@@ -255,12 +266,36 @@ export default function ShellTab({ agent, disabled, onDisabled }: ShellTabProps)
     );
   }
 
+  let statusLabel: ReactNode;
+  switch (status) {
+    case 'connecting':
+      statusLabel = <span className="shell-status-connecting">Connecting...</span>;
+      break;
+    case 'connected':
+      statusLabel = <span className="shell-status-connected">Connected</span>;
+      break;
+    default:
+      statusLabel = <span className="shell-status-ended">Session ended</span>;
+  }
+
+  const showShellSelector = agent.shells != null && agent.shells.length > 1;
+
   return (
     <div className="shell-tab">
       <div className="shell-status">
-        {status === 'connecting' && <span className="shell-status-connecting">Connecting...</span>}
-        {status === 'connected' && <span className="shell-status-connected">Connected</span>}
-        {status === 'ended' && <span className="shell-status-ended">Session ended</span>}
+        {statusLabel}
+        {showShellSelector && (
+          <select
+            className="shell-select"
+            value={selectedShell}
+            onChange={(e) => setSelectedShell(e.target.value)}
+            disabled={status === 'connecting'}
+          >
+            {agent.shells!.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        )}
       </div>
       <div className="shell-terminal" ref={termRef} />
     </div>

@@ -389,9 +389,34 @@ main.panel-open {
 }
 
 .shell-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-size: 0.7rem;
   padding: 0.3rem 0;
   flex-shrink: 0;
+}
+
+.shell-select {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  padding: 0.15rem 0.4rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.7rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.shell-select:focus {
+  border-color: var(--accent-primary);
+}
+
+.shell-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .shell-status-connecting { color: var(--warning); }
