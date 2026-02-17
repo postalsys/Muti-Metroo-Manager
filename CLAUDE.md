@@ -1,5 +1,45 @@
 # Muti Metroo Manager — Claude Code Instructions
 
+## Muti Metroo (the agent)
+
+**Source:** `../Muti-Metroo` (`github.com/postalsys/muti-metroo`)
+
+Userspace mesh networking agent. Creates encrypted TCP tunnels over QUIC/HTTP2/WebSocket transports. Multi-hop routing with SOCKS5 ingress and CIDR-based exit routing. E2E encryption (X25519 + ChaCha20-Poly1305) — transit nodes can't decrypt payload.
+
+### Agent Roles
+
+- **Ingress** — SOCKS5 proxy entry point, looks up routes, opens streams to exit
+- **Transit** — Relays frames between peers, can't decrypt payload
+- **Exit** — Opens real TCP connections, advertises CIDR routes, handles DNS
+
+### Key Concepts
+
+- **Peers:** Long-lived connections via QUIC/H2/WS, auto-reconnect with backoff
+- **Streams:** Multiplexed virtual connections (state machine: Opening→Open→HalfClosed→Closed)
+- **Routes:** CIDR LPM + domain pattern matching, flood-propagated with hop-count TTL
+- **Port forwarding:** ngrok-style endpoint (exit) + listener (ingress) keyed by routing key
+
+### Agent HTTP API
+
+The Manager proxies all of these via `/api/proxy/*`:
+
+| Category | Endpoints |
+|----------|-----------|
+| Health | `/healthz`, `/ready` |
+| Dashboard | `/api/topology`, `/api/dashboard`, `/api/mesh-test` |
+| Remote | `/agents/{id}`, `/agents/{id}/shell` (WS), `/agents/{id}/file/upload`, `/agents/{id}/file/download`, `/agents/{id}/routes/manage` |
+| Control | `/routes/advertise`, `/sleep`, `/wake`, `/sleep/status` |
+
+### Agent Config (relevant to Manager)
+
+| Config key | Notes |
+|------------|-------|
+| `http.address` (default `:8080`) | The URL the Manager's `-agent` flag points to |
+| `shell.enabled` + `shell.whitelist` | Must be enabled for ShellTab |
+| `file_transfer.enabled` + `file_transfer.allowed_paths` | Must be enabled for FilesTab |
+| `exit.enabled` + `exit.routes` | Controls route advertisements |
+| `socks5.enabled` + `socks5.address` | Shown in InfoTab |
+
 ## Build & Run
 
 ```bash
