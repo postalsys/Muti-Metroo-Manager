@@ -3,12 +3,13 @@ import type { TopologyAgentInfo, SleepStatusResponse } from '../api/types';
 interface HeaderProps {
   agent: TopologyAgentInfo | null;
   sleepStatus: SleepStatusResponse | null;
+  testing: boolean;
   onSleep: () => void;
   onWake: () => void;
   onRunTest: () => void;
 }
 
-export default function Header({ agent, sleepStatus, onSleep, onWake, onRunTest }: HeaderProps) {
+export default function Header({ agent, sleepStatus, testing, onSleep, onWake, onRunTest }: HeaderProps) {
   return (
     <header>
       <div className="header-content">
@@ -17,8 +18,12 @@ export default function Header({ agent, sleepStatus, onSleep, onWake, onRunTest 
           <h1>Muti Metroo</h1>
         </div>
         <div className="header-controls">
-          <button className="header-btn test-btn" onClick={onRunTest}>
-            Run Test
+          <button
+            className="header-btn test-btn"
+            onClick={onRunTest}
+            disabled={testing}
+          >
+            {testing ? 'Testing...' : 'Run Test'}
           </button>
           {sleepStatus?.enabled && (
             <>

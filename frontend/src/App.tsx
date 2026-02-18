@@ -25,6 +25,8 @@ export default function App() {
   const [meshTest, setMeshTest] = useState<MeshTestResponse | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [highlightedPath, setHighlightedPath] = useState<string[]>([]);
+  const [testRunning, setTestRunning] = useState(false);
+  const [testBanner, setTestBanner] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Agent management state
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
@@ -44,7 +46,7 @@ export default function App() {
 
   const runMeshTest = useCallback(async () => {
     try {
-      const results = await getMeshTest(true);
+      const results = await getMeshTest(false);
       setMeshTest(results);
     } catch (err) {
       console.error('Failed to run mesh test:', err);
@@ -81,6 +83,13 @@ export default function App() {
     return () => clearInterval(id);
   }, [refreshSleepStatus]);
 
+  // Auto-dismiss test banner after 8s
+  useEffect(() => {
+    if (!testBanner) return;
+    const id = setTimeout(() => setTestBanner(null), 8000);
+    return () => clearTimeout(id);
+  }, [testBanner]);
+
   const handleHighlight = useCallback((pathIds: string[]) => {
     setHighlightedPath(pathIds);
   }, []);
@@ -116,11 +125,19 @@ export default function App() {
   }, [refreshSleepStatus]);
 
   const handleRunTest = useCallback(async () => {
+    setTestRunning(true);
+    setTestBanner(null);
     try {
       const results = await getMeshTest(true);
       setMeshTest(results);
+      const reachable = results.reachable_count ?? 0;
+      const total = results.total_count ?? 0;
+      const duration = results.duration_ms ?? 0;
+      setTestBanner({ type: 'success', message: `${reachable}/${total} reachable · ${duration}ms` });
     } catch (err) {
-      console.error('Failed to run mesh test:', err);
+      setTestBanner({ type: 'error', message: err instanceof Error ? err.message : 'Mesh test failed' });
+    } finally {
+      setTestRunning(false);
     }
   }, []);
 
@@ -152,10 +169,17 @@ export default function App() {
       <Header
         agent={dashboard?.agent ?? null}
         sleepStatus={sleepStatus}
+        testing={testRunning}
         onSleep={handleSleep}
         onWake={handleWake}
         onRunTest={handleRunTest}
       />
+      {testBanner && (
+        <div className={`test-banner test-banner-${testBanner.type}`}>
+          <span>{testBanner.message}</span>
+          <button className="test-banner-dismiss" onClick={() => setTestBanner(null)}>&times;</button>
+        </div>
+      )}
       <main className={selectedAgent ? 'panel-open' : ''}>
         <StatsPanel stats={dashboard?.stats ?? null} agents={topology?.agents ?? []} />
         <MetroMap

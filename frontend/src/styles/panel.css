@@ -146,6 +146,14 @@ main.panel-open {
   background: rgba(109, 179, 109, 0.3);
 }
 
+.header-btn.test-btn:disabled {
+  background: rgba(91, 155, 213, 0.1);
+  color: rgba(91, 155, 213, 0.5);
+  border-color: rgba(91, 155, 213, 0.2);
+  cursor: not-allowed;
+  animation: pulse 1.5s infinite;
+}
+
 .header-btn.polling-btn {
   background: rgba(168, 159, 148, 0.15);
   color: var(--text-secondary);
@@ -672,6 +680,39 @@ main.panel-open {
   font-size: 0.85rem;
   text-align: center;
   padding: 2rem 1rem;
+}
+
+/* --- Test Banner --- */
+.test-banner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0.5rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+  animation: bannerSlideIn 0.2s ease-out;
+}
+
+.test-banner-success { color: var(--success); }
+.test-banner-error { color: var(--error); }
+
+.test-banner-dismiss {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1.1rem;
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.test-banner-dismiss:hover { opacity: 1; }
+
+@keyframes bannerSlideIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* --- Responsive --- */
