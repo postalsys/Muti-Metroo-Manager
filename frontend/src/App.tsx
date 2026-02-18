@@ -14,6 +14,7 @@ import RouteTable from './components/RouteTable';
 import ForwardRouteTable from './components/ForwardRouteTable';
 import Footer from './components/Footer';
 import AgentPanel from './components/AgentPanel/AgentPanel';
+import TestResultsModal from './components/TestResultsModal';
 
 const POLL_INTERVAL = 5000;
 const MESH_TEST_INTERVAL = 60000;
@@ -26,7 +27,7 @@ export default function App() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [highlightedPath, setHighlightedPath] = useState<string[]>([]);
   const [testRunning, setTestRunning] = useState(false);
-  const [testBanner, setTestBanner] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [testModal, setTestModal] = useState<{ type: 'success' | 'error'; data?: MeshTestResponse; error?: string } | null>(null);
 
   // Agent management state
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
@@ -83,13 +84,6 @@ export default function App() {
     return () => clearInterval(id);
   }, [refreshSleepStatus]);
 
-  // Auto-dismiss test banner after 8s
-  useEffect(() => {
-    if (!testBanner) return;
-    const id = setTimeout(() => setTestBanner(null), 8000);
-    return () => clearTimeout(id);
-  }, [testBanner]);
-
   const handleHighlight = useCallback((pathIds: string[]) => {
     setHighlightedPath(pathIds);
   }, []);
@@ -126,16 +120,13 @@ export default function App() {
 
   const handleRunTest = useCallback(async () => {
     setTestRunning(true);
-    setTestBanner(null);
+    setTestModal(null);
     try {
       const results = await getMeshTest(true);
       setMeshTest(results);
-      const reachable = results.reachable_count ?? 0;
-      const total = results.total_count ?? 0;
-      const duration = results.duration_ms ?? 0;
-      setTestBanner({ type: 'success', message: `${reachable}/${total} reachable · ${duration}ms` });
+      setTestModal({ type: 'success', data: results });
     } catch (err) {
-      setTestBanner({ type: 'error', message: err instanceof Error ? err.message : 'Mesh test failed' });
+      setTestModal({ type: 'error', error: err instanceof Error ? err.message : 'Mesh test failed' });
     } finally {
       setTestRunning(false);
     }
@@ -174,11 +165,13 @@ export default function App() {
         onWake={handleWake}
         onRunTest={handleRunTest}
       />
-      {testBanner && (
-        <div className={`test-banner test-banner-${testBanner.type}`}>
-          <span>{testBanner.message}</span>
-          <button className="test-banner-dismiss" onClick={() => setTestBanner(null)}>&times;</button>
-        </div>
+      {testModal && (
+        <TestResultsModal
+          type={testModal.type}
+          data={testModal.data}
+          error={testModal.error}
+          onClose={() => setTestModal(null)}
+        />
       )}
       <main className={selectedAgent ? 'panel-open' : ''}>
         <StatsPanel stats={dashboard?.stats ?? null} agents={topology?.agents ?? []} />
