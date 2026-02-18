@@ -82,6 +82,7 @@ export interface TopologyAgentInfo {
   forward_listeners: string[];
   forward_endpoints: string[];
   shells?: string[];
+  shell_enabled?: boolean;
   file_transfer_enabled?: boolean;
 }
 

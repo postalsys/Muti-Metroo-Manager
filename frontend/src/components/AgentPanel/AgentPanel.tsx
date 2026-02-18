@@ -38,7 +38,7 @@ export default function AgentPanel({ agent, meshResult, capabilities, onCapabili
   const tabs: { id: TabId; label: string; disabled: boolean }[] = [
     { id: 'info', label: 'Info', disabled: false },
     { id: 'routes', label: 'Routes', disabled: false },
-    { id: 'shell', label: 'Shell', disabled: capabilities.shell === false || !agent.shells?.length },
+    { id: 'shell', label: 'Shell', disabled: capabilities.shell === false || agent.shell_enabled !== true },
     { id: 'files', label: 'Files', disabled: capabilities.fileTransfer === false || !agent.file_transfer_enabled },
   ];
 
@@ -66,7 +66,7 @@ export default function AgentPanel({ agent, meshResult, capabilities, onCapabili
         {activeTab === 'shell' && (
           <ShellTab
             agent={agent}
-            disabled={capabilities.shell === false}
+            disabled={capabilities.shell === false || agent.shell_enabled !== true}
             onDisabled={() => handleCapUpdate({ shell: false })}
           />
         )}
