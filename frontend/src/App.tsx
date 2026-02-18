@@ -139,6 +139,15 @@ export default function App() {
     setSelectedAgentId(prev => prev);
   }, []);
 
+  const allForwardKeys = useMemo(() => {
+    if (!topology) return [];
+    const keys = new Set(topology.agents.flatMap(a => [
+      ...(a.forward_listeners || []),
+      ...(a.forward_endpoints || []),
+    ]));
+    return Array.from(keys).sort();
+  }, [topology]);
+
   // Resolve selected agent details
   const selectedAgent: TopologyAgentInfo | null = useMemo(() => {
     if (!selectedAgentId || !topology) return null;
@@ -201,6 +210,7 @@ export default function App() {
           agent={selectedAgent}
           meshResult={selectedMeshResult}
           capabilities={selectedCapabilities}
+          allForwardKeys={allForwardKeys}
           onCapabilityUpdate={handleCapabilityUpdate}
           onRoutesChanged={refresh}
           onClose={handleClosePanel}

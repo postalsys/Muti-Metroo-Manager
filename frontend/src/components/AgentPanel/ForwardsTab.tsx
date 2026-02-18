@@ -1,13 +1,14 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { TopologyAgentInfo, ForwardListenerEntry, ForwardManageRequest } from '../../api/types';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import type { TopologyAgentInfo, ForwardListenerEntry } from '../../api/types';
 import { manageAgentForwards } from '../../api/client';
 
 interface ForwardsTabProps {
   agent: TopologyAgentInfo;
+  allForwardKeys: string[];
   onForwardsChanged: () => void;
 }
 
-export default function ForwardsTab({ agent, onForwardsChanged }: ForwardsTabProps) {
+export default function ForwardsTab({ agent, allForwardKeys, onForwardsChanged }: ForwardsTabProps) {
   const [listeners, setListeners] = useState<ForwardListenerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [unreachable, setUnreachable] = useState(false);
@@ -17,6 +18,8 @@ export default function ForwardsTab({ agent, onForwardsChanged }: ForwardsTabPro
   const [newAddress, setNewAddress] = useState('');
   const [newMaxConn, setNewMaxConn] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const comboboxRef = useRef<HTMLDivElement>(null);
 
   const fetchListeners = useCallback(async () => {
     setLoading(true);
@@ -42,20 +45,21 @@ export default function ForwardsTab({ agent, onForwardsChanged }: ForwardsTabPro
   }, [fetchListeners]);
 
   const handleAdd = useCallback(async () => {
-    if (!newKey.trim() || !newAddress.trim()) return;
+    const key = newKey.trim();
+    const address = newAddress.trim();
+    if (!key || !address) return;
     setActionLoading(true);
     setError(null);
     setSuccess(null);
     try {
       const maxConn = parseInt(newMaxConn, 10);
-      const req: ForwardManageRequest = {
+      await manageAgentForwards(agent.id, {
         action: 'add',
-        key: newKey.trim(),
-        address: newAddress.trim(),
+        key,
+        address,
         ...(maxConn > 0 && { max_connections: maxConn }),
-      };
-      await manageAgentForwards(agent.id, req);
-      setSuccess(`Added listener "${newKey.trim()}" on ${newAddress.trim()}`);
+      });
+      setSuccess(`Added listener "${key}" on ${address}`);
       setNewKey('');
       setNewAddress('');
       setNewMaxConn('');
@@ -83,6 +87,26 @@ export default function ForwardsTab({ agent, onForwardsChanged }: ForwardsTabPro
       setActionLoading(false);
     }
   }, [agent.id, fetchListeners, onForwardsChanged]);
+
+  // Click-outside closes dropdown
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (comboboxRef.current && !comboboxRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filteredKeys = useMemo(() => {
+    const activeKeys = new Set([
+      ...listeners.map(l => l.key),
+      ...(agent.forward_listeners || []),
+    ]);
+    const query = newKey.trim().toLowerCase();
+    return allForwardKeys.filter(k => !activeKeys.has(k) && (!query || k.toLowerCase().includes(query)));
+  }, [allForwardKeys, listeners, agent.forward_listeners, newKey]);
 
   // Static listeners: keys from topology that aren't in the dynamic list
   const staticKeys = useMemo(() => {
@@ -121,14 +145,35 @@ export default function ForwardsTab({ agent, onForwardsChanged }: ForwardsTabPro
     <div className="routes-tab">
       {/* Add listener form */}
       <div className="routes-add-form">
-        <input
-          type="text"
-          className="panel-input"
-          placeholder="Key"
-          value={newKey}
-          onChange={e => setNewKey(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleAdd()}
-        />
+        <div className="combobox" ref={comboboxRef}>
+          <input
+            type="text"
+            className="panel-input"
+            placeholder="Key"
+            value={newKey}
+            onChange={e => { setNewKey(e.target.value); setDropdownOpen(true); }}
+            onFocus={() => setDropdownOpen(true)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') { setDropdownOpen(false); handleAdd(); }
+              if (e.key === 'Escape') setDropdownOpen(false);
+            }}
+          />
+          {dropdownOpen && (
+            <div className="combobox-dropdown">
+              {filteredKeys.length > 0 ? filteredKeys.map(k => (
+                <div
+                  key={k}
+                  className="combobox-option"
+                  onMouseDown={e => { e.preventDefault(); setNewKey(k); setDropdownOpen(false); }}
+                >
+                  {k}
+                </div>
+              )) : (
+                <div className="combobox-empty">No matching keys</div>
+              )}
+            </div>
+          )}
+        </div>
         <input
           type="text"
           className="panel-input"

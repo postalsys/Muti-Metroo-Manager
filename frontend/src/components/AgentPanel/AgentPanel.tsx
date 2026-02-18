@@ -12,12 +12,13 @@ interface AgentPanelProps {
   agent: TopologyAgentInfo;
   meshResult: MeshTestResult | undefined;
   capabilities: AgentCapabilities;
+  allForwardKeys: string[];
   onCapabilityUpdate: (agentId: string, cap: Partial<AgentCapabilities>) => void;
   onRoutesChanged: () => void;
   onClose: () => void;
 }
 
-export default function AgentPanel({ agent, meshResult, capabilities, onCapabilityUpdate, onRoutesChanged, onClose }: AgentPanelProps) {
+export default function AgentPanel({ agent, meshResult, capabilities, allForwardKeys, onCapabilityUpdate, onRoutesChanged, onClose }: AgentPanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>('info');
 
   // Escape key closes panel
@@ -65,7 +66,7 @@ export default function AgentPanel({ agent, meshResult, capabilities, onCapabili
       <div className="agent-panel-content">
         {activeTab === 'info' && <InfoTab agent={agent} meshResult={meshResult} />}
         {activeTab === 'routes' && <RoutesTab agent={agent} onRoutesChanged={onRoutesChanged} />}
-        {activeTab === 'forwards' && <ForwardsTab agent={agent} onForwardsChanged={onRoutesChanged} />}
+        {activeTab === 'forwards' && <ForwardsTab agent={agent} allForwardKeys={allForwardKeys} onForwardsChanged={onRoutesChanged} />}
         {activeTab === 'shell' && (
           <ShellTab
             agent={agent}

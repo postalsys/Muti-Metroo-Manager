@@ -431,6 +431,50 @@ main.panel-open {
   color: var(--text-secondary);
 }
 
+/* --- Combobox (Forwards key selector) --- */
+.combobox {
+  position: relative;
+  flex: 1;
+}
+
+.combobox .panel-input {
+  width: 100%;
+}
+
+.combobox-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 2px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.combobox-option {
+  padding: 0.35rem 0.6rem;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  color: #9b59b6;
+  transition: background 0.1s;
+}
+
+.combobox-option:hover {
+  background: rgba(155, 89, 182, 0.15);
+}
+
+.combobox-empty {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
 /* --- Shell Tab --- */
 .shell-tab {
   display: flex;
