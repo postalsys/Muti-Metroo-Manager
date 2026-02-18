@@ -157,7 +157,7 @@ export default function App() {
         onRunTest={handleRunTest}
       />
       <main className={selectedAgent ? 'panel-open' : ''}>
-        <StatsPanel stats={dashboard?.stats ?? null} routes={dashboard?.routes ?? null} />
+        <StatsPanel stats={dashboard?.stats ?? null} agents={topology?.agents ?? []} />
         <MetroMap
           agents={topology?.agents ?? []}
           connections={topology?.connections ?? []}

@@ -106,13 +106,34 @@ export default function InfoTab({ agent, meshResult }: InfoTabProps) {
         </div>
       )}
 
-      {/* UDP */}
-      {agent.udp_enabled && (
-        <div className="info-section">
-          <div className="info-section-header udp">UDP Relay</div>
-          <div className="info-section-value">Enabled</div>
+      {/* Remote Access */}
+      <div className="info-section">
+        <div className="info-section-header access">Remote Access</div>
+        <div className="info-line">
+          <span className="info-label">Shell</span>
+          <span className="info-value">
+            {agent.shells && agent.shells.length > 0 ? (
+              <span className="info-routes-list" style={{ marginTop: 0 }}>
+                {agent.shells.map(sh => (
+                  <span key={sh} className="info-shell-tag">{sh}</span>
+                ))}
+              </span>
+            ) : (
+              <span className="info-access-na">Not available</span>
+            )}
+          </span>
         </div>
-      )}
+        <div className="info-line">
+          <span className="info-label">File Transfer</span>
+          <span className="info-value">
+            {agent.file_transfer_enabled ? (
+              <span className="info-access-enabled">Enabled</span>
+            ) : (
+              <span className="info-access-na">Not available</span>
+            )}
+          </span>
+        </div>
+      </div>
 
       {/* Exit Routes */}
       {exitRoutes.length > 0 && (

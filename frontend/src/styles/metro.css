@@ -273,15 +273,40 @@
 }
 
 .tooltip-section-header.socks5 { color: #5b9bd5; }
-.tooltip-section-header.udp { color: #9b59b6; }
 .tooltip-section-header.exits { color: #6db36d; }
 .tooltip-section-header.forwards { color: #9b59b6; }
 .tooltip-section-header.reachability { color: #a89f94; }
+.tooltip-section-header.access { color: #daa054; }
 
 .tooltip-section-value {
     font-family: 'Courier New', monospace;
     font-size: 0.75rem;
     color: #f5ebe0;
+}
+
+.tooltip-access-tags {
+    display: inline-flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+
+.tooltip-access-tag {
+    background: rgba(218, 160, 84, 0.15);
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    color: #daa054;
+    border: 1px solid rgba(218, 160, 84, 0.4);
+}
+
+.tooltip-access-enabled {
+    color: #6db36d;
+}
+
+.tooltip-access-na {
+    color: #666;
+    font-style: italic;
 }
 
 .tooltip-exits-list {

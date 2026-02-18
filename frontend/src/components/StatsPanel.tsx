@@ -1,39 +1,33 @@
-import type { Stats, DashboardRouteInfo } from '../api/types';
+import type { Stats, TopologyAgentInfo } from '../api/types';
 
 interface StatsPanelProps {
   stats: Stats | null;
-  routes: DashboardRouteInfo[] | null;
+  agents: TopologyAgentInfo[];
 }
 
-export default function StatsPanel({ stats, routes }: StatsPanelProps) {
-  const exitNodes = new Set(routes?.map(r => r.origin_id) || []);
+export default function StatsPanel({ stats, agents }: StatsPanelProps) {
+  const ingressCount = agents.filter(a => a.roles?.includes('ingress')).length;
+  const transitCount = agents.filter(a => a.roles?.includes('transit')).length;
+  const exitCount = agents.filter(a => a.roles?.includes('exit')).length;
 
   return (
     <section className="stats-panel">
       <div className="stat-card">
-        <div className="stat-value">{stats?.peer_count ?? '-'}</div>
-        <div className="stat-label">Peers</div>
+        <div className="stat-value">{agents.length || '-'}</div>
+        <div className="stat-label">Agents</div>
       </div>
       <div className="stat-card">
-        <div className="stat-value">{stats?.stream_count ?? '-'}</div>
-        <div className="stat-label">Streams</div>
+        <div className="stat-value">{ingressCount || '-'}</div>
+        <div className="stat-label">Ingress</div>
       </div>
       <div className="stat-card">
-        <div className="stat-value">{exitNodes.size || '-'}</div>
-        <div className="stat-label">Exit Nodes</div>
+        <div className="stat-value">{transitCount || '-'}</div>
+        <div className="stat-label">Transit</div>
       </div>
-      {stats?.socks5_running && (
-        <div className="stat-card stat-card-active">
-          <div className="stat-value">ON</div>
-          <div className="stat-label">SOCKS5</div>
-        </div>
-      )}
-      {stats?.exit_handler_running && (
-        <div className="stat-card stat-card-active">
-          <div className="stat-value">ON</div>
-          <div className="stat-label">Exit Handler</div>
-        </div>
-      )}
+      <div className="stat-card">
+        <div className="stat-value">{exitCount || '-'}</div>
+        <div className="stat-label">Exit</div>
+      </div>
     </section>
   );
 }

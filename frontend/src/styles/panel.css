@@ -183,7 +183,7 @@ main.panel-open {
 }
 
 .info-section-header.socks5 { color: #5b9bd5; }
-.info-section-header.udp { color: #9b59b6; }
+.info-section-header.access { color: #daa054; }
 .info-section-header.exits { color: #6db36d; }
 .info-section-header.forwards { color: #9b59b6; }
 
@@ -254,6 +254,25 @@ main.panel-open {
   font-size: 0.75rem;
   color: #c4883a;
   border: 1px solid var(--border-color);
+}
+
+.info-shell-tag {
+  background: rgba(218, 160, 84, 0.15);
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  color: #daa054;
+  border: 1px solid rgba(218, 160, 84, 0.4);
+}
+
+.info-access-na {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.info-access-enabled {
+  color: var(--success);
 }
 
 .info-forward-key {
@@ -446,6 +465,35 @@ main.panel-open {
 
 .shell-picker-btn:hover {
   background: rgba(218, 160, 84, 0.25);
+}
+
+.shell-status-actions {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+/* Copy CLI command button in status bar */
+.shell-copy-btn {
+  background: rgba(91, 155, 213, 0.15);
+  border: 1px solid rgba(91, 155, 213, 0.4);
+  border-radius: 3px;
+  padding: 0.15rem 0.5rem;
+  color: #5b9bd5;
+  font-size: 0.65rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.shell-copy-btn:hover {
+  background: rgba(91, 155, 213, 0.3);
+}
+
+.shell-copy-btn.copied {
+  background: rgba(109, 179, 109, 0.15);
+  border-color: rgba(109, 179, 109, 0.4);
+  color: var(--success);
 }
 
 /* Close shell button in status bar */

@@ -38,8 +38,8 @@ export default function AgentPanel({ agent, meshResult, capabilities, onCapabili
   const tabs: { id: TabId; label: string; disabled: boolean }[] = [
     { id: 'info', label: 'Info', disabled: false },
     { id: 'routes', label: 'Routes', disabled: false },
-    { id: 'shell', label: 'Shell', disabled: capabilities.shell === false },
-    { id: 'files', label: 'Files', disabled: capabilities.fileTransfer === false },
+    { id: 'shell', label: 'Shell', disabled: capabilities.shell === false || !agent.shells?.length },
+    { id: 'files', label: 'Files', disabled: capabilities.fileTransfer === false || !agent.file_transfer_enabled },
   ];
 
   return (

@@ -53,6 +53,7 @@ export default function ShellTab({ agent, disabled, onDisabled }: ShellTabProps)
   const [status, setStatus] = useState<'connecting' | 'connected' | 'ended' | 'error'>('connecting');
   const [errorMsg, setErrorMsg] = useState('');
   const [activeShell, setActiveShell] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const prevAgentId = useRef(agent.id);
 
   // Reset to picker when switching agents
@@ -310,9 +311,21 @@ export default function ShellTab({ agent, disabled, onDisabled }: ShellTabProps)
     <div className="shell-tab">
       <div className="shell-status">
         {statusLabel}
-        <button className="shell-close-btn" onClick={() => setActiveShell(null)}>
-          Close Shell
-        </button>
+        <div className="shell-status-actions">
+          <button
+            className={`shell-copy-btn${copied ? ' copied' : ''}`}
+            onClick={() => {
+              navigator.clipboard.writeText(`muti-metroo shell --tty ${agent.id} ${activeShell}`);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            }}
+          >
+            {copied ? 'Copied!' : 'Copy CLI'}
+          </button>
+          <button className="shell-close-btn" onClick={() => setActiveShell(null)}>
+            Close Shell
+          </button>
+        </div>
       </div>
       <div className="shell-terminal" ref={termRef} />
     </div>

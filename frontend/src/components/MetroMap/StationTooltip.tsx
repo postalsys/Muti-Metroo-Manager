@@ -151,17 +151,38 @@ export default function StationTooltip({
         )}
       </div>
 
+      <div className="tooltip-section">
+        <div className="tooltip-section-header access">Remote Access</div>
+        <div className="tooltip-info-line">
+          <span className="tooltip-info-label">Shell</span>
+          <span className="tooltip-info-value">
+            {agent.shells && agent.shells.length > 0 ? (
+              <span className="tooltip-access-tags">
+                {agent.shells.map(sh => (
+                  <span key={sh} className="tooltip-access-tag">{sh}</span>
+                ))}
+              </span>
+            ) : (
+              <span className="tooltip-access-na">Not available</span>
+            )}
+          </span>
+        </div>
+        <div className="tooltip-info-line">
+          <span className="tooltip-info-label">File Transfer</span>
+          <span className="tooltip-info-value">
+            {agent.file_transfer_enabled ? (
+              <span className="tooltip-access-enabled">Enabled</span>
+            ) : (
+              <span className="tooltip-access-na">Not available</span>
+            )}
+          </span>
+        </div>
+      </div>
+
       {agent.socks5_addr && (
         <div className="tooltip-section">
           <div className="tooltip-section-header socks5">SOCKS5 Proxy</div>
           <div className="tooltip-section-value">{agent.socks5_addr}</div>
-        </div>
-      )}
-
-      {agent.udp_enabled && (
-        <div className="tooltip-section">
-          <div className="tooltip-section-header udp">UDP Relay</div>
-          <div className="tooltip-section-value">Enabled</div>
         </div>
       )}
 
