@@ -408,6 +408,29 @@ main.panel-open {
   border: 1px solid rgba(168, 159, 148, 0.3);
 }
 
+/* --- Forwards Tab --- */
+.forwards-key {
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  color: #9b59b6;
+  flex: 1;
+}
+
+.forwards-address {
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.forwards-maxconn {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.routes-list-item-static .forwards-key {
+  color: var(--text-secondary);
+}
+
 /* --- Shell Tab --- */
 .shell-tab {
   display: flex;

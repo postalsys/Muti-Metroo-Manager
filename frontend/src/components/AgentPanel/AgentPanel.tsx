@@ -2,10 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import type { TopologyAgentInfo, MeshTestResult, AgentCapabilities } from '../../api/types';
 import InfoTab from './InfoTab';
 import RoutesTab from './RoutesTab';
+import ForwardsTab from './ForwardsTab';
 import ShellTab from './ShellTab';
 import FilesTab from './FilesTab';
 
-type TabId = 'info' | 'routes' | 'shell' | 'files';
+type TabId = 'info' | 'routes' | 'forwards' | 'shell' | 'files';
 
 interface AgentPanelProps {
   agent: TopologyAgentInfo;
@@ -38,6 +39,7 @@ export default function AgentPanel({ agent, meshResult, capabilities, onCapabili
   const tabs: { id: TabId; label: string; disabled: boolean }[] = [
     { id: 'info', label: 'Info', disabled: false },
     { id: 'routes', label: 'Routes', disabled: false },
+    { id: 'forwards', label: 'Forwards', disabled: false },
     { id: 'shell', label: 'Shell', disabled: capabilities.shell === false || agent.shell_enabled !== true },
     { id: 'files', label: 'Files', disabled: capabilities.fileTransfer === false || !agent.file_transfer_enabled },
   ];
@@ -63,6 +65,7 @@ export default function AgentPanel({ agent, meshResult, capabilities, onCapabili
       <div className="agent-panel-content">
         {activeTab === 'info' && <InfoTab agent={agent} meshResult={meshResult} />}
         {activeTab === 'routes' && <RoutesTab agent={agent} onRoutesChanged={onRoutesChanged} />}
+        {activeTab === 'forwards' && <ForwardsTab agent={agent} onForwardsChanged={onRoutesChanged} />}
         {activeTab === 'shell' && (
           <ShellTab
             agent={agent}

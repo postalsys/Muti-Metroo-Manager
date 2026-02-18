@@ -139,6 +139,26 @@ export interface RouteManageResponse {
   message?: string;
 }
 
+export interface ForwardManageRequest {
+  action: 'add' | 'remove' | 'list';
+  key?: string;
+  address?: string;
+  max_connections?: number;
+}
+
+export interface ForwardListenerEntry {
+  key: string;
+  address: string;
+  max_connections: number;
+  dynamic: boolean;
+}
+
+export interface ForwardManageResponse {
+  status: string;
+  listeners?: ForwardListenerEntry[];
+  message?: string;
+}
+
 export interface AgentCapabilities {
   shell: boolean | null;
   fileTransfer: boolean | null;

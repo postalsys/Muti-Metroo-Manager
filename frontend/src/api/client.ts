@@ -5,6 +5,8 @@ import type {
   SleepStatusResponse,
   RouteManageRequest,
   RouteManageResponse,
+  ForwardManageRequest,
+  ForwardManageResponse,
 } from './types';
 
 const BASE = '';
@@ -55,6 +57,10 @@ export function triggerRouteAdvertise(): Promise<unknown> {
 
 export function manageAgentRoutes(agentId: string, req: RouteManageRequest): Promise<RouteManageResponse> {
   return fetchJSON(`/api/proxy/agents/${agentId}/routes/manage`, 'POST', req);
+}
+
+export function manageAgentForwards(agentId: string, req: ForwardManageRequest): Promise<ForwardManageResponse> {
+  return fetchJSON(`/api/proxy/agents/${agentId}/forward/manage`, 'POST', req);
 }
 
 export async function downloadFile(agentId: string, path: string): Promise<Blob> {
