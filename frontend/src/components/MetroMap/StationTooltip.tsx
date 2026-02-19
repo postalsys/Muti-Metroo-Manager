@@ -91,7 +91,7 @@ export default function StationTooltip({
       onMouseLeave={onMouseLeave}
     >
       <div className="tooltip-header">
-        <div className="tooltip-name tooltip-name-clickable" onClick={() => onClickAgent(agent.short_id)}>{agent.display_name || agent.short_id}</div>
+        <div className="tooltip-name tooltip-name-clickable" onClick={() => { onMouseLeave(); onClickAgent(agent.short_id); }}>{agent.display_name || agent.short_id}</div>
       </div>
 
       {roles.length > 0 && (

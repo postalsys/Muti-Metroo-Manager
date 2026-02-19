@@ -46,8 +46,9 @@ export default function ForwardsTab({ agent, allForwardKeys, onForwardsChanged }
 
   const handleAdd = useCallback(async () => {
     const key = newKey.trim();
-    const address = newAddress.trim();
+    let address = newAddress.trim();
     if (!key || !address) return;
+    if (/^\d+$/.test(address)) address = ':' + address;
     setActionLoading(true);
     setError(null);
     setSuccess(null);
