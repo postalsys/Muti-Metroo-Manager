@@ -99,66 +99,173 @@ main.panel-open {
   transition: margin-right 0.2s ease-out;
 }
 
-/* --- Header Controls --- */
-.header-controls {
+/* --- Section Header Row (title + actions) --- */
+.section-header-row {
   display: flex;
-  gap: 0.5rem;
   align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
 }
 
-.header-btn {
-  padding: 0.4rem 0.9rem;
+.section-header-row h2 {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+/* --- Actions Menu --- */
+.actions-menu {
+  position: relative;
+}
+
+.actions-menu-trigger {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.25rem 0.4rem;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.actions-menu-trigger:hover {
+  color: var(--text-primary);
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+.actions-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 180px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.3rem 0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  animation: fadeInDown 0.12s ease-out;
+}
+
+.actions-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s;
+  text-align: left;
+}
+
+.actions-menu-item:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.actions-menu-item:disabled {
+  color: var(--text-secondary);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.actions-menu-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.actions-menu-dot.test { background: #5b9bd5; }
+.actions-menu-dot.sleep { background: var(--warning); }
+.actions-menu-dot.wake { background: var(--success); }
+.actions-menu-dot.polling { background: var(--text-secondary); }
+
+.actions-confirm {
+  padding: 0.75rem;
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sleep-confirm-msg {
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  line-height: 1.4;
+  margin: 0 0 0.6rem 0;
+}
+
+.sleep-confirm-actions {
+  display: flex;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
+
+.sleep-confirm-cancel {
+  padding: 0.3rem 0.6rem;
   border: 1px solid var(--border-color);
   border-radius: 4px;
-  font-size: 0.8rem;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition: background 0.15s, color 0.15s;
 }
 
-.header-btn.test-btn {
-  background: rgba(91, 155, 213, 0.15);
-  color: #5b9bd5;
-  border-color: rgba(91, 155, 213, 0.4);
-}
-
-.header-btn.test-btn:hover {
-  background: rgba(91, 155, 213, 0.3);
-}
-
-.header-btn.sleep-btn {
-  background: rgba(218, 160, 84, 0.15);
-  color: var(--warning);
-  border-color: rgba(218, 160, 84, 0.4);
-}
-
-.header-btn.sleep-btn:hover {
-  background: rgba(218, 160, 84, 0.3);
-}
-
-.header-btn.wake-btn {
-  background: rgba(109, 179, 109, 0.15);
-  color: var(--success);
-  border-color: rgba(109, 179, 109, 0.4);
-}
-
-.header-btn.wake-btn:hover {
-  background: rgba(109, 179, 109, 0.3);
-}
-
-.header-btn.test-btn:disabled {
-  background: rgba(91, 155, 213, 0.1);
-  color: rgba(91, 155, 213, 0.5);
-  border-color: rgba(91, 155, 213, 0.2);
-  cursor: not-allowed;
-  animation: pulse 1.5s infinite;
-}
-
-.header-btn.polling-btn {
+.sleep-confirm-cancel:hover {
   background: rgba(168, 159, 148, 0.15);
-  color: var(--text-secondary);
-  border-color: rgba(168, 159, 148, 0.3);
-  cursor: not-allowed;
+  color: var(--text-primary);
+}
+
+.sleep-confirm-ok {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid rgba(218, 160, 84, 0.4);
+  border-radius: 4px;
+  background: rgba(218, 160, 84, 0.2);
+  color: var(--warning);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.sleep-confirm-ok:hover {
+  background: rgba(218, 160, 84, 0.35);
+}
+
+/* Sleeping banner */
+.sleep-banner {
+  background: rgba(218, 160, 84, 0.1);
+  border-bottom: 1px solid rgba(218, 160, 84, 0.3);
+  color: var(--warning);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 0.4rem 1rem;
+}
+
+/* Sleep error banner */
+.sleep-error-banner {
+  background: rgba(207, 102, 121, 0.12);
+  border-bottom: 1px solid rgba(207, 102, 121, 0.3);
+  color: var(--error);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 0.4rem 1rem;
+  animation: fadeInDown 0.15s ease-out;
 }
 
 /* --- Info Tab --- */

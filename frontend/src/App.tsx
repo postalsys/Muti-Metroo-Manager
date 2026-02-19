@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, useReducer } from 'react';
 import type {
   DashboardResponse, TopologyResponse, MeshTestResponse,
   SleepStatusResponse, AgentCapabilities, TopologyAgentInfo, MeshTestResult,
@@ -10,6 +10,7 @@ import {
 import Header from './components/Header';
 import StatsPanel from './components/StatsPanel';
 import MetroMap from './components/MetroMap/MetroMap';
+import ActionsMenu from './components/ActionsMenu';
 import RouteTable from './components/RouteTable';
 import ForwardRouteTable from './components/ForwardRouteTable';
 import Footer from './components/Footer';
@@ -32,7 +33,10 @@ export default function App() {
   // Agent management state
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [sleepStatus, setSleepStatus] = useState<SleepStatusResponse | null>(null);
+  const [sleepLoading, setSleepLoading] = useState(false);
+  const [sleepError, setSleepError] = useState<string | null>(null);
   const capabilityCacheRef = useRef<Map<string, AgentCapabilities>>(new Map());
+  const [capCacheVersion, bumpCapCache] = useReducer((n: number) => n + 1, 0);
 
   const refresh = useCallback(async () => {
     try {
@@ -84,6 +88,13 @@ export default function App() {
     return () => clearInterval(id);
   }, [refreshSleepStatus]);
 
+  // Auto-dismiss sleep error after 5 seconds
+  useEffect(() => {
+    if (!sleepError) return;
+    const id = setTimeout(() => setSleepError(null), 5000);
+    return () => clearTimeout(id);
+  }, [sleepError]);
+
   const handleHighlight = useCallback((pathIds: string[]) => {
     setHighlightedPath(pathIds);
   }, []);
@@ -101,20 +112,28 @@ export default function App() {
   }, []);
 
   const handleSleep = useCallback(async () => {
+    setSleepLoading(true);
+    setSleepError(null);
     try {
       await sleepCluster();
       refreshSleepStatus();
     } catch (err) {
-      console.error('Failed to sleep cluster:', err);
+      setSleepError(err instanceof Error ? err.message : 'Failed to put mesh to sleep');
+    } finally {
+      setSleepLoading(false);
     }
   }, [refreshSleepStatus]);
 
   const handleWake = useCallback(async () => {
+    setSleepLoading(true);
+    setSleepError(null);
     try {
       await wakeCluster();
       refreshSleepStatus();
     } catch (err) {
-      console.error('Failed to wake cluster:', err);
+      setSleepError(err instanceof Error ? err.message : 'Failed to wake mesh');
+    } finally {
+      setSleepLoading(false);
     }
   }, [refreshSleepStatus]);
 
@@ -135,8 +154,7 @@ export default function App() {
   const handleCapabilityUpdate = useCallback((agentId: string, cap: Partial<AgentCapabilities>) => {
     const existing = capabilityCacheRef.current.get(agentId) || { shell: null, fileTransfer: null };
     capabilityCacheRef.current.set(agentId, { ...existing, ...cap });
-    // Force re-render by updating selected agent
-    setSelectedAgentId(prev => prev);
+    bumpCapCache();
   }, []);
 
   const allForwardKeys = useMemo(() => {
@@ -162,18 +180,21 @@ export default function App() {
   const selectedCapabilities: AgentCapabilities = useMemo(() => {
     if (!selectedAgentId) return { shell: null, fileTransfer: null };
     return capabilityCacheRef.current.get(selectedAgentId) || { shell: null, fileTransfer: null };
-  }, [selectedAgentId]);
+  }, [selectedAgentId, capCacheVersion]);
 
   return (
     <>
-      <Header
-        agent={dashboard?.agent ?? null}
-        sleepStatus={sleepStatus}
-        testing={testRunning}
-        onSleep={handleSleep}
-        onWake={handleWake}
-        onRunTest={handleRunTest}
-      />
+      <Header agent={dashboard?.agent ?? null} />
+      {sleepError && (
+        <div className="sleep-error-banner">
+          {sleepError}
+        </div>
+      )}
+      {sleepStatus?.state === 'SLEEPING' && !sleepLoading && (
+        <div className="sleep-banner">
+          Mesh is sleeping — peer connections and tunnels are suspended
+        </div>
+      )}
       {testModal && (
         <TestResultsModal
           type={testModal.type}
@@ -191,6 +212,16 @@ export default function App() {
           highlightedPath={highlightedPath}
           selectedAgentId={selectedAgentId}
           onStationClick={handleStationClick}
+          headerActions={
+            <ActionsMenu
+              sleepStatus={sleepStatus}
+              sleepLoading={sleepLoading}
+              testing={testRunning}
+              onSleep={handleSleep}
+              onWake={handleWake}
+              onRunTest={handleRunTest}
+            />
+          }
         />
         <RouteTable
           routes={dashboard?.routes ?? null}

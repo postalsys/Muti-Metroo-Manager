@@ -14,9 +14,10 @@ interface MetroMapProps {
   highlightedPath: string[];
   selectedAgentId: string | null;
   onStationClick: (agentId: string) => void;
+  headerActions?: React.ReactNode;
 }
 
-export default function MetroMap({ agents, connections, meshTestResults, highlightedPath, selectedAgentId, onStationClick }: MetroMapProps) {
+export default function MetroMap({ agents, connections, meshTestResults, highlightedPath, selectedAgentId, onStationClick, headerActions }: MetroMapProps) {
   const svgRef = useRef<SVGSVGElement>(null);
 
   // Station tooltip state
@@ -63,12 +64,14 @@ export default function MetroMap({ agents, connections, meshTestResults, highlig
   const pathSet = useMemo(() => new Set(highlightedPath), [highlightedPath]);
   const hasHighlight = highlightedPath.length > 0;
 
-  function getStationHighlight(agentId: string): 'none' | 'highlighted' | 'dimmed' {
+  type HighlightState = 'none' | 'highlighted' | 'dimmed';
+
+  function getStationHighlight(agentId: string): HighlightState {
     if (!hasHighlight) return 'none';
     return pathSet.has(agentId) ? 'highlighted' : 'dimmed';
   }
 
-  function getConnectionHighlight(fromId: string, toId: string): 'none' | 'highlighted' | 'dimmed' {
+  function getConnectionHighlight(fromId: string, toId: string): HighlightState {
     if (!hasHighlight) return 'none';
     for (let i = 0; i < highlightedPath.length - 1; i++) {
       if (
@@ -131,10 +134,8 @@ export default function MetroMap({ agents, connections, meshTestResults, highlig
     setConnTooltip(null);
   }, []);
 
-  function positionConnTooltip(e: React.MouseEvent) {
-    let x = e.clientX + 15;
-    let y = e.clientY + 15;
-    setConnTooltipPos({ x, y });
+  function positionConnTooltip(e: React.MouseEvent): void {
+    setConnTooltipPos({ x: e.clientX + 15, y: e.clientY + 15 });
   }
 
   // Sort agents by ID for deterministic render order
@@ -145,7 +146,10 @@ export default function MetroMap({ agents, connections, meshTestResults, highlig
 
   return (
     <section className="metro-section">
-      <h2>Network Topology</h2>
+      <div className="section-header-row">
+        <h2>Network Topology</h2>
+        {headerActions}
+      </div>
       <div className="map-container">
         <svg
           ref={svgRef}
