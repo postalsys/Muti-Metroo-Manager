@@ -9,6 +9,7 @@ interface StationTooltipProps {
   svgElement: SVGSVGElement | null;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
+  onClickAgent: (agentId: string) => void;
 }
 
 export default function StationTooltip({
@@ -18,6 +19,7 @@ export default function StationTooltip({
   svgElement,
   onMouseEnter,
   onMouseLeave,
+  onClickAgent,
 }: StationTooltipProps) {
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [copyHint, setCopyHint] = useState('Click to copy');
@@ -89,7 +91,7 @@ export default function StationTooltip({
       onMouseLeave={onMouseLeave}
     >
       <div className="tooltip-header">
-        <div className="tooltip-name">{agent.display_name || agent.short_id}</div>
+        <div className="tooltip-name tooltip-name-clickable" onClick={() => onClickAgent(agent.short_id)}>{agent.display_name || agent.short_id}</div>
       </div>
 
       {roles.length > 0 && (

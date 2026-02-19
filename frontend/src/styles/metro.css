@@ -154,6 +154,14 @@
     color: #daa054;
 }
 
+.station-tooltip .tooltip-name-clickable {
+    cursor: pointer;
+}
+
+.station-tooltip .tooltip-name-clickable:hover {
+    text-decoration: underline;
+}
+
 .station-tooltip .tooltip-roles {
     padding: 0.5rem 0.8rem;
     display: flex;

@@ -222,6 +222,7 @@ export default function MetroMap({ agents, connections, meshTestResults, highlig
           svgElement={svgRef.current}
           onMouseEnter={handleTooltipMouseEnter}
           onMouseLeave={handleTooltipMouseLeave}
+          onClickAgent={onStationClick}
         />
       )}
 
