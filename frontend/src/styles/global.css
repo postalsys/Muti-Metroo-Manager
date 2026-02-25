@@ -95,6 +95,15 @@ footer {
     font-size: 0.75rem;
 }
 
+.footer-copyright a {
+    color: var(--text-secondary);
+    text-decoration: none;
+}
+
+.footer-copyright a:hover {
+    color: var(--accent-primary);
+}
+
 @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
