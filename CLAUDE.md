@@ -114,6 +114,72 @@ Error codes: `ERR_SHELL_DISABLED = 20`, `ERR_FILE_TRANSFER_DENIED = 12`.
 2. **Do NOT use CanvasAddon** — `@xterm/addon-canvas` v0.7.0 breaks cursor rendering with xterm v6.0.0. The DOM renderer works correctly.
 3. **Echo loop prevention** — BusyBox PTYs echo terminal query responses back. Suppressed via CSI parser handlers for DSR (`n`), DA1 (`c`), DA2 (`>c`), and CPR (`R`). DSR responses are proxied back via `sendStdin()` for vi/ash cursor positioning. Belt-and-suspenders regex on `onData`: `/^\x1b\[[\?>]?[\d;]*[Rcn]$/`.
 
+## Releasing
+
+Releases are automated via GitHub Actions using [release-please](https://github.com/googleapis/release-please).
+
+**IMPORTANT: Never manually manage releases, tags, or CHANGELOG.md.** All of these are automatically handled by the release-please GitHub Action. Do not:
+- Create git tags manually
+- Edit CHANGELOG.md directly
+- Create GitHub releases manually
+- Modify version numbers in code
+
+Just write commits with conventional commit messages and let release-please handle everything.
+
+### Commit Message Format
+
+Use [Conventional Commits](https://www.conventionalcommits.org/) format:
+
+```
+type(scope): description
+
+[optional body]
+
+[optional footer]
+```
+
+**Commit types and version bumps:**
+
+| Type | Description | Version Bump |
+|------|-------------|--------------|
+| `feat:` | New feature | Minor (0.X.0) |
+| `fix:` | Bug fix | Patch (0.0.X) |
+| `chore:` | Maintenance | None |
+| `docs:` | Documentation | None |
+| `refactor:` | Code refactoring | None |
+| `test:` | Test changes | None |
+| `ci:` | CI/CD changes | None |
+
+**Breaking changes** (major version bump):
+- Add `!` after type: `feat!: remove deprecated API`
+- Or add `BREAKING CHANGE:` in the commit footer
+
+### Release Process
+
+1. Merge PRs with conventional commit messages to `master`
+2. release-please automatically creates a Release PR with:
+   - Version bump based on commit types
+   - Updated CHANGELOG.md
+3. Merge the Release PR to trigger:
+   - Git tag creation
+   - Frontend build (Node.js + npm)
+   - Binary builds for all platforms
+   - UPX compression (Linux and Windows amd64)
+   - GitHub Release with assets and checksums
+
+### Build Targets
+
+- darwin/arm64 (macOS Apple Silicon)
+- darwin/amd64 (macOS Intel)
+- linux/amd64 (x86_64)
+- linux/arm64 (ARM64)
+- windows/amd64 (x86_64)
+- windows/arm64 (ARM64)
+
+Linux and Windows amd64 binaries are compressed with UPX. Darwin binaries are not (UPX breaks macOS code signing).
+
+**Binaries location**: https://github.com/postalsys/Muti-Metroo-Manager/releases
+
 ## Common Tasks
 
 ### Add a new API endpoint
