@@ -11,13 +11,29 @@ import type {
 
 const BASE = '';
 
+// --- Token management (sessionStorage) ---
+const TOKEN_KEY = 'muti-metroo-token';
+export function getToken(): string | null { return sessionStorage.getItem(TOKEN_KEY); }
+export function setToken(token: string): void { sessionStorage.setItem(TOKEN_KEY, token); }
+export function clearToken(): void { sessionStorage.removeItem(TOKEN_KEY); }
+
+function authHeaders(): Record<string, string> {
+  const t = getToken();
+  return t ? { Authorization: `Bearer ${t}` } : {};
+}
+
 async function fetchJSON<T>(url: string, method = 'GET', body?: unknown): Promise<T> {
-  const opts: RequestInit = { method };
+  const opts: RequestInit = { method, headers: { ...authHeaders() } };
   if (body !== undefined) {
-    opts.headers = { 'Content-Type': 'application/json' };
+    (opts.headers as Record<string, string>)['Content-Type'] = 'application/json';
     opts.body = JSON.stringify(body);
   }
   const resp = await fetch(`${BASE}${url}`, opts);
+  if (resp.status === 401) {
+    clearToken();
+    window.dispatchEvent(new CustomEvent('auth-required'));
+    throw new Error('Authentication required');
+  }
   if (!resp.ok) {
     const text = await resp.text().catch(() => '');
     // Try to extract message from JSON error responses
@@ -66,9 +82,14 @@ export function manageAgentForwards(agentId: string, req: ForwardManageRequest):
 export async function downloadFile(agentId: string, path: string): Promise<Blob> {
   const resp = await fetch(`${BASE}/api/proxy/agents/${agentId}/file/download`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ path }),
   });
+  if (resp.status === 401) {
+    clearToken();
+    window.dispatchEvent(new CustomEvent('auth-required'));
+    throw new Error('Authentication required');
+  }
   if (!resp.ok) {
     const text = await resp.text();
     throw new Error(text || `Download failed: ${resp.status}`);
@@ -87,8 +108,14 @@ export async function uploadFile(
 
   const resp = await fetch(`${BASE}/api/proxy/agents/${agentId}/file/upload`, {
     method: 'POST',
+    headers: { ...authHeaders() },
     body: form,
   });
+  if (resp.status === 401) {
+    clearToken();
+    window.dispatchEvent(new CustomEvent('auth-required'));
+    throw new Error('Authentication required');
+  }
   if (!resp.ok) {
     const text = await resp.text();
     throw new Error(text || `Upload failed: ${resp.status}`);
@@ -110,5 +137,7 @@ export function wakeCluster(): Promise<unknown> {
 
 export function getShellWebSocketURL(agentId: string): string {
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${proto}//${window.location.host}/api/proxy/agents/${agentId}/shell`;
+  const base = `${proto}//${window.location.host}/api/proxy/agents/${agentId}/shell`;
+  const token = getToken();
+  return token ? `${base}?token=${encodeURIComponent(token)}` : base;
 }

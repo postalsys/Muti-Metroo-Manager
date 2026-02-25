@@ -10,16 +10,18 @@ import (
 
 // Proxy forwards requests to a Muti Metroo agent, stripping the /api/proxy prefix.
 type Proxy struct {
-	agentURL       string
-	client         *http.Client
-	longClient     *http.Client
+	agentURL   string
+	agentToken string
+	client     *http.Client
+	longClient *http.Client
 }
 
 // New creates a proxy targeting the given agent URL.
-func New(agentURL string) *Proxy {
+func New(agentURL, agentToken string) *Proxy {
 	tlsCfg := &tls.Config{InsecureSkipVerify: true}
 	return &Proxy{
-		agentURL: strings.TrimRight(agentURL, "/"),
+		agentURL:   strings.TrimRight(agentURL, "/"),
+		agentToken: agentToken,
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 			Transport: &http.Transport{
@@ -77,6 +79,10 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if v := r.Header.Get(hdr); v != "" {
 			proxyReq.Header.Set(hdr, v)
 		}
+	}
+	// Server-side token overrides any client-sent Authorization header
+	if p.agentToken != "" {
+		proxyReq.Header.Set("Authorization", "Bearer "+p.agentToken)
 	}
 	// Default Accept to JSON if not set
 	if proxyReq.Header.Get("Accept") == "" {

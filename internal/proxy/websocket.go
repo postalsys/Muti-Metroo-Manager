@@ -26,8 +26,17 @@ func (p *Proxy) handleWebSocket(w http.ResponseWriter, r *http.Request, agentPat
 	dialer := websocket.Dialer{
 		TLSClientConfig: p.client.Transport.(*http.Transport).TLSClientConfig,
 	}
-	agentConn, _, err := dialer.Dial(targetURL, nil)
+	var dialHeaders http.Header
+	if p.agentToken != "" {
+		dialHeaders = http.Header{"Authorization": {"Bearer " + p.agentToken}}
+	}
+	agentConn, dialResp, err := dialer.Dial(targetURL, dialHeaders)
 	if err != nil {
+		if dialResp != nil && dialResp.StatusCode == http.StatusUnauthorized {
+			w.Header().Set("WWW-Authenticate", `Bearer realm="muti-metroo"`)
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
 		http.Error(w, "failed to connect to agent websocket: "+err.Error(), http.StatusBadGateway)
 		return
 	}

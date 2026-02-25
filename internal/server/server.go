@@ -9,9 +9,9 @@ import (
 
 // New creates an HTTP server that serves the embedded frontend and proxies
 // API requests to the Muti Metroo agent.
-func New(addr, agentURL string) *http.Server {
+func New(addr, agentURL, agentToken string) *http.Server {
 	mux := http.NewServeMux()
-	p := proxy.New(agentURL)
+	p := proxy.New(agentURL, agentToken)
 
 	// Proxy API routes to the agent
 	mux.Handle("/api/proxy/", p)
@@ -29,7 +29,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Upgrade, Connection")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Upgrade, Connection")
 
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)

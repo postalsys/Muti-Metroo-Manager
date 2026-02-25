@@ -965,6 +965,61 @@ main.panel-open {
   font-size: 0.85rem;
 }
 
+/* --- Token Dialog --- */
+.token-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.token-dialog {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  width: 380px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.token-dialog-header {
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--warning);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.token-dialog-body {
+  padding: 1rem;
+}
+
+.token-dialog-body p {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin: 0 0 0.75rem 0;
+  line-height: 1.4;
+}
+
+.token-dialog-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.token-dialog-input.input-error {
+  border-color: var(--error);
+}
+
+.token-dialog-footer {
+  padding: 0 1rem 1rem;
+}
+
+.token-dialog-btn {
+  width: 100%;
+}
+
 /* --- Responsive --- */
 @media (max-width: 900px) {
   .agent-panel {

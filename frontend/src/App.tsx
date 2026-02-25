@@ -6,6 +6,7 @@ import type {
 import {
   getDashboard, getTopology, getMeshTest,
   getSleepStatus, sleepCluster, wakeCluster,
+  setToken,
 } from './api/client';
 import Header from './components/Header';
 import StatsPanel from './components/StatsPanel';
@@ -16,6 +17,7 @@ import ForwardRouteTable from './components/ForwardRouteTable';
 import Footer from './components/Footer';
 import AgentPanel from './components/AgentPanel/AgentPanel';
 import TestResultsModal from './components/TestResultsModal';
+import TokenDialog from './components/TokenDialog';
 
 const POLL_INTERVAL = 5000;
 const MESH_TEST_INTERVAL = 60000;
@@ -29,6 +31,7 @@ export default function App() {
   const [highlightedPath, setHighlightedPath] = useState<string[]>([]);
   const [testRunning, setTestRunning] = useState(false);
   const [testModal, setTestModal] = useState<{ type: 'success' | 'error'; data?: MeshTestResponse; error?: string } | null>(null);
+  const [authRequired, setAuthRequired] = useState(false);
 
   // Agent management state
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
@@ -94,6 +97,19 @@ export default function App() {
     const id = setTimeout(() => setSleepError(null), 5000);
     return () => clearTimeout(id);
   }, [sleepError]);
+
+  // Listen for auth-required events from API client
+  useEffect(() => {
+    const handler = () => setAuthRequired(true);
+    window.addEventListener('auth-required', handler);
+    return () => window.removeEventListener('auth-required', handler);
+  }, []);
+
+  const handleTokenSubmit = useCallback((token: string) => {
+    setToken(token);
+    setAuthRequired(false);
+    refresh();
+  }, [refresh]);
 
   const handleHighlight = useCallback((pathIds: string[]) => {
     setHighlightedPath(pathIds);
@@ -184,6 +200,7 @@ export default function App() {
 
   return (
     <>
+      {authRequired && <TokenDialog onSubmit={handleTokenSubmit} />}
       <Header agent={dashboard?.agent ?? null} />
       {sleepError && (
         <div className="sleep-error-banner">
