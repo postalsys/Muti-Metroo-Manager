@@ -9,7 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/coinstash/muti-metroo-manager/internal/server"
+	"github.com/postalsys/muti-metroo-manager/internal/server"
 )
 
 var Version = "dev"

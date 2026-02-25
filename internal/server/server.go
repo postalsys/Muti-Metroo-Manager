@@ -3,8 +3,8 @@ package server
 import (
 	"net/http"
 
-	"github.com/coinstash/muti-metroo-manager/internal/proxy"
-	"github.com/coinstash/muti-metroo-manager/internal/webui"
+	"github.com/postalsys/muti-metroo-manager/internal/proxy"
+	"github.com/postalsys/muti-metroo-manager/internal/webui"
 )
 
 // New creates an HTTP server that serves the embedded frontend and proxies

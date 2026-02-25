@@ -1,4 +1,4 @@
-module github.com/coinstash/muti-metroo-manager
+module github.com/postalsys/muti-metroo-manager
 
 go 1.25.5
 
