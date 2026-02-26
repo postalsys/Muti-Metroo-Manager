@@ -152,17 +152,184 @@ export function calculateTreeLayout(
   });
 }
 
-export function createMetroPath(x1: number, y1: number, x2: number, y2: number): string {
+// ---- Metro path routing: 45° diagonal transitions with collision avoidance ----
+
+const CORNER_RADIUS = 20;
+const COS45 = Math.SQRT1_2;
+const STATION_CLEARANCE = 25;
+const COLLINEAR_OFFSET = 40;
+
+type Point = { x: number; y: number };
+type Segment = [number, number, number, number];
+
+interface PathResult {
+  d: string;
+  segments: Segment[];
+}
+
+function segmentPassesNearPoint(
+  ax: number, ay: number, bx: number, by: number,
+  px: number, py: number, clearance: number,
+): boolean {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.hypot(px - ax, py - ay) < clearance;
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy)) < clearance;
+}
+
+function pathCollides(segments: Segment[], stations: Point[], clearance: number): boolean {
+  for (const [ax, ay, bx, by] of segments) {
+    for (const { x: px, y: py } of stations) {
+      if (segmentPassesNearPoint(ax, ay, bx, by, px, py, clearance)) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Build a two-segment metro path: one straight axis-aligned segment and one 45° diagonal,
+ * connected by a rounded corner. The `straightFirst` flag controls the order.
+ *
+ * straightFirst = true:  straight along longer axis, then diagonal to destination
+ * straightFirst = false: diagonal first, then straight along longer axis to destination
+ */
+function buildTwoSegmentPath(
+  x1: number, y1: number, x2: number, y2: number,
+  r: number, straightFirst: boolean,
+): PathResult {
   const dx = x2 - x1;
   const dy = y2 - y1;
+  const absX = Math.abs(dx);
+  const absY = Math.abs(dy);
+  const sX = Math.sign(dx);
+  const sY = Math.sign(dy);
+  const horizontal = absX >= absY;
+  const diag = horizontal ? absY : absX;
+  const straightLen = (horizontal ? absX : absY) - diag;
 
-  if (Math.abs(dx) < 10 || Math.abs(dy) < 10) {
+  // Corner point where the straight and diagonal segments meet
+  let cx: number, cy: number;
+  if (straightFirst) {
+    cx = horizontal ? x1 + straightLen * sX : x1;
+    cy = horizontal ? y1 : y1 + straightLen * sY;
+  } else {
+    cx = horizontal ? x1 + diag * sX : x2;
+    cy = horizontal ? y2 : y1 + diag * sY;
+  }
+
+  const segments: Segment[] = [[x1, y1, cx, cy], [cx, cy, x2, y2]];
+
+  const er = Math.min(r, straightLen, diag);
+  if (er < 2) {
+    return { d: `M${x1},${y1} L${cx},${cy} L${x2},${y2}`, segments };
+  }
+
+  // Compute rounded-corner control points on either side of (cx, cy).
+  // The straight side retracts along one axis; the diagonal side retracts at 45°.
+  let preX: number, preY: number, postX: number, postY: number;
+  if (straightFirst) {
+    // Straight segment comes first: retract along the straight axis
+    preX = horizontal ? cx - er * sX : cx;
+    preY = horizontal ? cy : cy - er * sY;
+    // Advance into the diagonal
+    postX = cx + er * COS45 * sX;
+    postY = cy + er * COS45 * sY;
+  } else {
+    // Diagonal segment comes first: retract along the diagonal
+    preX = cx - er * COS45 * sX;
+    preY = cy - er * COS45 * sY;
+    // Advance into the straight axis
+    postX = horizontal ? cx + er * sX : cx;
+    postY = horizontal ? cy : cy + er * sY;
+  }
+
+  return {
+    d: `M${x1},${y1} L${preX},${preY} Q${cx},${cy} ${postX},${postY} L${x2},${y2}`,
+    segments,
+  };
+}
+
+/** Straight line when unambiguous, chevron bypass when an intermediate station sits between endpoints. */
+function buildCollinearPath(
+  x1: number, y1: number, x2: number, y2: number,
+  allStations: Point[],
+): string {
+  const dx = x2 - x1;
+  const isVertical = Math.abs(dx) < 10;
+
+  // Check for an intermediate station sitting between the two endpoints along the shared axis
+  const hasIntermediate = allStations.some(s => {
+    if (isVertical) {
+      const minY = Math.min(y1, y2);
+      const maxY = Math.max(y1, y2);
+      return Math.abs(s.x - x1) < 10 && s.y > minY + 10 && s.y < maxY - 10;
+    }
+    const minX = Math.min(x1, x2);
+    const maxX = Math.max(x1, x2);
+    return Math.abs(s.y - y1) < 10 && s.x > minX + 10 && s.x < maxX - 10;
+  });
+
+  if (!hasIntermediate) return `M${x1},${y1} L${x2},${y2}`;
+
+  // Chevron: diagonal out to offset apex, rounded corner, diagonal back
+  const mx = (x1 + x2) / 2;
+  const my = (y1 + y2) / 2;
+  const apexX = isVertical ? mx + COLLINEAR_OFFSET : mx;
+  const apexY = isVertical ? my : my + COLLINEAR_OFFSET;
+
+  const armLen = Math.hypot(apexX - x1, apexY - y1);
+  const er = Math.min(CORNER_RADIUS, armLen / 3);
+
+  const nsX = (x1 - apexX) / armLen;
+  const nsY = (y1 - apexY) / armLen;
+  const endLen = Math.hypot(x2 - apexX, y2 - apexY);
+  const neX = (x2 - apexX) / endLen;
+  const neY = (y2 - apexY) / endLen;
+
+  const preX = apexX + er * nsX;
+  const preY = apexY + er * nsY;
+  const postX = apexX + er * neX;
+  const postY = apexY + er * neY;
+
+  return `M${x1},${y1} L${preX},${preY} Q${apexX},${apexY} ${postX},${postY} L${x2},${y2}`;
+}
+
+export function createMetroPath(
+  x1: number, y1: number, x2: number, y2: number,
+  allStations: Point[] = [],
+): string {
+  const absX = Math.abs(x2 - x1);
+  const absY = Math.abs(y2 - y1);
+
+  // Aligned: straight line or chevron bypass
+  if (absX < 10 || absY < 10) {
+    return buildCollinearPath(x1, y1, x2, y2, allStations);
+  }
+
+  // Near-diagonal: straight diagonal line
+  if (Math.abs(absX - absY) < 10) {
     return `M${x1},${y1} L${x2},${y2}`;
   }
 
-  const diagonalLength = Math.min(Math.abs(dx), Math.abs(dy));
-  const midX = x1 + (Math.abs(dx) - diagonalLength) * Math.sign(dx);
-  return `M${x1},${y1} H${midX} L${x2},${y2}`;
+  // Non-aligned: try both orientations, pick collision-free one
+  const others = allStations.filter(
+    s => !(Math.abs(s.x - x1) < 5 && Math.abs(s.y - y1) < 5) &&
+         !(Math.abs(s.x - x2) < 5 && Math.abs(s.y - y2) < 5),
+  );
+
+  const straightFirst = buildTwoSegmentPath(x1, y1, x2, y2, CORNER_RADIUS, true);
+  if (!pathCollides(straightFirst.segments, others, STATION_CLEARANCE)) {
+    return straightFirst.d;
+  }
+
+  const diagFirst = buildTwoSegmentPath(x1, y1, x2, y2, CORNER_RADIUS, false);
+  if (!pathCollides(diagFirst.segments, others, STATION_CLEARANCE)) {
+    return diagFirst.d;
+  }
+
+  return straightFirst.d;
 }
 
 export function hashTopology(agents: TopologyAgentInfo[], connections: TopologyConnection[]): string {

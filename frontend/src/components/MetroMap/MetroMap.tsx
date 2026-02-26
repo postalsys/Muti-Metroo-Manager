@@ -41,6 +41,7 @@ export default function MetroMap({ agents, connections, meshTestResults, highlig
     [topoHash]
   );
   const viewBox = useMemo(() => calculateViewBox(positionedAgents), [positionedAgents]);
+  const stationPositions = useMemo(() => positionedAgents.map(a => ({ x: a.x, y: a.y })), [positionedAgents]);
 
   // Agent lookup map
   const agentMap = useMemo(() => {
@@ -168,6 +169,7 @@ export default function MetroMap({ agents, connections, meshTestResults, highlig
                   from={from}
                   to={to}
                   conn={conn}
+                  stationPositions={stationPositions}
                   highlightState={getConnectionHighlight(conn.from_agent, conn.to_agent)}
                   onHover={handleConnHover}
                   onMove={handleConnMove}
