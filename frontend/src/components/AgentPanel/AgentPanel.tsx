@@ -10,6 +10,7 @@ type TabId = 'info' | 'routes' | 'forwards' | 'shell' | 'files';
 
 interface AgentPanelProps {
   agent: TopologyAgentInfo;
+  isActive: boolean;
   meshResult: MeshTestResult | undefined;
   capabilities: AgentCapabilities;
   allForwardKeys: string[];
@@ -18,17 +19,18 @@ interface AgentPanelProps {
   onClose: () => void;
 }
 
-export default function AgentPanel({ agent, meshResult, capabilities, allForwardKeys, onCapabilityUpdate, onRoutesChanged, onClose }: AgentPanelProps) {
+export default function AgentPanel({ agent, isActive, meshResult, capabilities, allForwardKeys, onCapabilityUpdate, onRoutesChanged, onClose }: AgentPanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>('info');
 
-  // Escape key closes panel
+  // Escape key closes panel (only when active)
   useEffect(() => {
+    if (!isActive) return;
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose();
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [isActive, onClose]);
 
   const handleCapUpdate = useCallback(
     (cap: Partial<AgentCapabilities>) => {
@@ -46,7 +48,7 @@ export default function AgentPanel({ agent, meshResult, capabilities, allForward
   ];
 
   return (
-    <aside className="agent-panel">
+    <aside className="agent-panel" style={isActive ? undefined : { display: 'none' }}>
       <div className="agent-panel-header">
         <div className="agent-panel-title">{agent.display_name || agent.short_id}</div>
         <button className="agent-panel-close" onClick={onClose}>&times;</button>
@@ -70,6 +72,7 @@ export default function AgentPanel({ agent, meshResult, capabilities, allForward
         {activeTab === 'shell' && (
           <ShellTab
             agent={agent}
+            isActive={isActive}
             disabled={capabilities.shell === false || agent.shell_enabled !== true}
             onDisabled={() => handleCapUpdate({ shell: false })}
           />

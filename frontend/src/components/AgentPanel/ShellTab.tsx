@@ -13,6 +13,7 @@ import { getShellWebSocketURL } from '../../api/client';
 
 interface ShellTabProps {
   agent: TopologyAgentInfo;
+  isActive: boolean;
   disabled: boolean;
   onDisabled: () => void;
 }
@@ -44,7 +45,7 @@ function encodeResizeFrame(rows: number, cols: number): ArrayBuffer {
   return encodeShellFrame(MSG_RESIZE, payload);
 }
 
-export default function ShellTab({ agent, disabled, onDisabled }: ShellTabProps) {
+export default function ShellTab({ agent, isActive, disabled, onDisabled }: ShellTabProps) {
   const termRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -54,13 +55,20 @@ export default function ShellTab({ agent, disabled, onDisabled }: ShellTabProps)
   const [errorMsg, setErrorMsg] = useState('');
   const [activeShell, setActiveShell] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const prevAgentId = useRef(agent.id);
 
-  // Reset to picker when switching agents
-  if (agent.id !== prevAgentId.current) {
-    prevAgentId.current = agent.id;
-    setActiveShell(null);
-  }
+  // Refit terminal when panel becomes visible (display:none -> visible)
+  useEffect(() => {
+    if (!isActive || !fitAddonRef.current || !wsRef.current) return;
+    // Use rAF to ensure the container has been laid out after display change
+    const raf = requestAnimationFrame(() => {
+      fitAddonRef.current?.fit();
+      const dims = fitAddonRef.current?.proposeDimensions();
+      if (dims && wsRef.current?.readyState === WebSocket.OPEN && connectedRef.current) {
+        wsRef.current.send(encodeResizeFrame(dims.rows, dims.cols));
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [isActive]);
 
   useEffect(() => {
     if (disabled || !activeShell || !termRef.current) return;

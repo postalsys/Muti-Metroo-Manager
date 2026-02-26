@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef, useReducer } from 'react';
 import type {
   DashboardResponse, TopologyResponse, MeshTestResponse,
-  SleepStatusResponse, AgentCapabilities, TopologyAgentInfo, MeshTestResult,
+  SleepStatusResponse, AgentCapabilities,
 } from './api/types';
 import {
   getDashboard, getTopology, getMeshTest,
@@ -22,6 +22,7 @@ import TokenDialog from './components/TokenDialog';
 const POLL_INTERVAL = 5000;
 const MESH_TEST_INTERVAL = 60000;
 const SLEEP_POLL_INTERVAL = 10000;
+const DEFAULT_CAPABILITIES: AgentCapabilities = { shell: null, fileTransfer: null };
 
 export default function App() {
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
@@ -35,11 +36,12 @@ export default function App() {
 
   // Agent management state
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [openedAgentIds, setOpenedAgentIds] = useState<Set<string>>(new Set());
   const [sleepStatus, setSleepStatus] = useState<SleepStatusResponse | null>(null);
   const [sleepLoading, setSleepLoading] = useState(false);
   const [sleepError, setSleepError] = useState<string | null>(null);
   const capabilityCacheRef = useRef<Map<string, AgentCapabilities>>(new Map());
-  const [capCacheVersion, bumpCapCache] = useReducer((n: number) => n + 1, 0);
+  const [, bumpCapCache] = useReducer((n: number) => n + 1, 0);
 
   const refresh = useCallback(async () => {
     try {
@@ -123,8 +125,13 @@ export default function App() {
     setSelectedAgentId(prev => prev === agentId ? null : agentId);
   }, []);
 
-  const handleClosePanel = useCallback(() => {
-    setSelectedAgentId(null);
+  const handleClosePanel = useCallback((agentId: string) => {
+    setOpenedAgentIds(prev => {
+      const next = new Set(prev);
+      next.delete(agentId);
+      return next;
+    });
+    setSelectedAgentId(prev => prev === agentId ? null : prev);
   }, []);
 
   const handleSleep = useCallback(async () => {
@@ -168,7 +175,7 @@ export default function App() {
   }, []);
 
   const handleCapabilityUpdate = useCallback((agentId: string, cap: Partial<AgentCapabilities>) => {
-    const existing = capabilityCacheRef.current.get(agentId) || { shell: null, fileTransfer: null };
+    const existing = capabilityCacheRef.current.get(agentId) || DEFAULT_CAPABILITIES;
     capabilityCacheRef.current.set(agentId, { ...existing, ...cap });
     bumpCapCache();
   }, []);
@@ -182,21 +189,34 @@ export default function App() {
     return Array.from(keys).sort();
   }, [topology]);
 
-  // Resolve selected agent details
-  const selectedAgent: TopologyAgentInfo | null = useMemo(() => {
-    if (!selectedAgentId || !topology) return null;
-    return topology.agents.find(a => a.short_id === selectedAgentId) || null;
-  }, [selectedAgentId, topology]);
+  // Add selected agent to opened set
+  useEffect(() => {
+    if (selectedAgentId) {
+      setOpenedAgentIds(prev => {
+        if (prev.has(selectedAgentId)) return prev;
+        const next = new Set(prev);
+        next.add(selectedAgentId);
+        return next;
+      });
+    }
+  }, [selectedAgentId]);
 
-  const selectedMeshResult: MeshTestResult | undefined = useMemo(() => {
-    if (!selectedAgentId || !meshTest?.results) return undefined;
-    return meshTest.results.find(r => r.short_id === selectedAgentId);
-  }, [selectedAgentId, meshTest]);
+  // Remove agents that disappeared from topology (went offline)
+  useEffect(() => {
+    if (!topology) return;
+    const liveIds = new Set(topology.agents.map(a => a.short_id));
+    setOpenedAgentIds(prev => {
+      const next = new Set([...prev].filter(id => liveIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+    setSelectedAgentId(prev => (prev && !liveIds.has(prev)) ? null : prev);
+  }, [topology]);
 
-  const selectedCapabilities: AgentCapabilities = useMemo(() => {
-    if (!selectedAgentId) return { shell: null, fileTransfer: null };
-    return capabilityCacheRef.current.get(selectedAgentId) || { shell: null, fileTransfer: null };
-  }, [selectedAgentId, capCacheVersion]);
+  // Resolve opened agents from topology
+  const openedAgents = useMemo(() => {
+    if (!topology) return [];
+    return topology.agents.filter(a => openedAgentIds.has(a.short_id));
+  }, [topology, openedAgentIds]);
 
   return (
     <>
@@ -220,7 +240,7 @@ export default function App() {
           onClose={() => setTestModal(null)}
         />
       )}
-      <main className={selectedAgent ? 'panel-open' : ''}>
+      <main className={selectedAgentId ? 'panel-open' : ''}>
         <StatsPanel stats={dashboard?.stats ?? null} agents={topology?.agents ?? []} />
         <MetroMap
           agents={topology?.agents ?? []}
@@ -253,17 +273,19 @@ export default function App() {
       </main>
       <Footer lastUpdate={lastUpdate} />
 
-      {selectedAgent && (
+      {openedAgents.map(agent => (
         <AgentPanel
-          agent={selectedAgent}
-          meshResult={selectedMeshResult}
-          capabilities={selectedCapabilities}
+          key={agent.short_id}
+          agent={agent}
+          isActive={selectedAgentId === agent.short_id}
+          meshResult={meshTest?.results?.find(r => r.short_id === agent.short_id)}
+          capabilities={capabilityCacheRef.current.get(agent.short_id) || DEFAULT_CAPABILITIES}
           allForwardKeys={allForwardKeys}
           onCapabilityUpdate={handleCapabilityUpdate}
           onRoutesChanged={refresh}
-          onClose={handleClosePanel}
+          onClose={() => handleClosePanel(agent.short_id)}
         />
-      )}
+      ))}
     </>
   );
 }
