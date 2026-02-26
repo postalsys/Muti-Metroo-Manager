@@ -5,8 +5,9 @@ import RoutesTab from './RoutesTab';
 import ForwardsTab from './ForwardsTab';
 import ShellTab from './ShellTab';
 import FilesTab from './FilesTab';
+import PingTab from './PingTab';
 
-type TabId = 'info' | 'routes' | 'forwards' | 'shell' | 'files';
+type TabId = 'info' | 'routes' | 'forwards' | 'shell' | 'files' | 'ping';
 
 interface AgentPanelProps {
   agent: TopologyAgentInfo;
@@ -45,6 +46,7 @@ export default function AgentPanel({ agent, isActive, meshResult, capabilities, 
     { id: 'forwards', label: 'Forwards', disabled: false },
     { id: 'shell', label: 'Shell', disabled: capabilities.shell === false || agent.shell_enabled !== true },
     { id: 'files', label: 'Files', disabled: capabilities.fileTransfer === false || !agent.file_transfer_enabled },
+    { id: 'ping', label: 'Ping', disabled: capabilities.icmp === false },
   ];
 
   return (
@@ -82,6 +84,12 @@ export default function AgentPanel({ agent, isActive, meshResult, capabilities, 
             agent={agent}
             disabled={capabilities.fileTransfer === false}
             onDisabled={() => handleCapUpdate({ fileTransfer: false })}
+          />
+        )}
+        {activeTab === 'ping' && (
+          <PingTab
+            agent={agent}
+            onDisabled={() => handleCapUpdate({ icmp: false })}
           />
         )}
       </div>

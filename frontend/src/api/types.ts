@@ -162,6 +162,7 @@ export interface ForwardManageResponse {
 export interface AgentCapabilities {
   shell: boolean | null;
   fileTransfer: boolean | null;
+  icmp: boolean | null;
 }
 
 // --- File browse types ---

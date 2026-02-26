@@ -22,7 +22,7 @@ import TokenDialog from './components/TokenDialog';
 const POLL_INTERVAL = 5000;
 const MESH_TEST_INTERVAL = 60000;
 const SLEEP_POLL_INTERVAL = 10000;
-const DEFAULT_CAPABILITIES: AgentCapabilities = { shell: null, fileTransfer: null };
+const DEFAULT_CAPABILITIES: AgentCapabilities = { shell: null, fileTransfer: null, icmp: null };
 
 export default function App() {
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
@@ -107,7 +107,17 @@ export default function App() {
     return () => window.removeEventListener('auth-required', handler);
   }, []);
 
-  const handleTokenSubmit = useCallback((token: string) => {
+  const handleTokenSubmit = useCallback(async (token: string): Promise<void> => {
+    let authFailed = false;
+    try {
+      const resp = await fetch('/api/proxy/api/dashboard', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      authFailed = resp.status === 401;
+    } catch {
+      // Network error — can't validate, assume token is OK
+    }
+    if (authFailed) throw new Error('Invalid token');
     setToken(token);
     setAuthRequired(false);
     refresh();

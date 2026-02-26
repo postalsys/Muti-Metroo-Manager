@@ -226,3 +226,10 @@ export function getShellWebSocketURL(agentId: string): string {
   const token = getToken();
   return token ? `${base}?token=${encodeURIComponent(token)}` : base;
 }
+
+export function getPingWebSocketURL(agentId: string): string {
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const base = `${proto}//${window.location.host}/api/proxy/agents/${agentId}/icmp`;
+  const token = getToken();
+  return token ? `${base}?token=${encodeURIComponent(token)}` : base;
+}
