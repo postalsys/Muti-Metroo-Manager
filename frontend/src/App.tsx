@@ -294,6 +294,7 @@ export default function App() {
           onCapabilityUpdate={handleCapabilityUpdate}
           onRoutesChanged={refresh}
           onClose={() => handleClosePanel(agent.short_id)}
+          animate={openedAgents.length <= 1}
         />
       ))}
     </>

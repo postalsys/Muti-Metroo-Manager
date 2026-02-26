@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { TopologyAgentInfo, MeshTestResult, AgentCapabilities } from '../../api/types';
 import InfoTab from './InfoTab';
 import RoutesTab from './RoutesTab';
@@ -18,10 +18,12 @@ interface AgentPanelProps {
   onCapabilityUpdate: (agentId: string, cap: Partial<AgentCapabilities>) => void;
   onRoutesChanged: () => void;
   onClose: () => void;
+  animate: boolean;
 }
 
-export default function AgentPanel({ agent, isActive, meshResult, capabilities, allForwardKeys, onCapabilityUpdate, onRoutesChanged, onClose }: AgentPanelProps) {
+export default function AgentPanel({ agent, isActive, meshResult, capabilities, allForwardKeys, onCapabilityUpdate, onRoutesChanged, onClose, animate }: AgentPanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>('info');
+  const slideIn = useRef(animate);
 
   // Escape key closes panel (only when active)
   useEffect(() => {
@@ -50,7 +52,7 @@ export default function AgentPanel({ agent, isActive, meshResult, capabilities, 
   ];
 
   return (
-    <aside className="agent-panel" style={isActive ? undefined : { display: 'none' }}>
+    <aside className={`agent-panel${slideIn.current ? ' agent-panel-slide-in' : ''}`} style={isActive ? undefined : { display: 'none' }}>
       <div className="agent-panel-header">
         <div className="agent-panel-title">{agent.display_name || agent.short_id}</div>
         <button className="agent-panel-close" onClick={onClose}>&times;</button>
