@@ -227,6 +227,15 @@ export function getShellWebSocketURL(agentId: string): string {
   return token ? `${base}?token=${encodeURIComponent(token)}` : base;
 }
 
+export function renameAgent(
+  agentId: string, isLocal: boolean, name: string,
+): Promise<{ status: string; name?: string }> {
+  const path = isLocal
+    ? '/api/proxy/display-name/manage'
+    : `/api/proxy/agents/${agentId}/display-name/manage`;
+  return fetchJSON(path, 'POST', { action: 'set', name });
+}
+
 export function getPingWebSocketURL(agentId: string): string {
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const base = `${proto}//${window.location.host}/api/proxy/agents/${agentId}/icmp`;
