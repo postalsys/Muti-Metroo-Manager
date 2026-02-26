@@ -212,7 +212,9 @@ main.panel-open {
   justify-content: flex-end;
 }
 
-.sleep-confirm-cancel {
+/* Shared dialog button styles (used by sleep confirm, chmod dialog) */
+.sleep-confirm-cancel,
+.chmod-btn-cancel {
   padding: 0.3rem 0.6rem;
   border: 1px solid var(--border-color);
   border-radius: 4px;
@@ -224,24 +226,34 @@ main.panel-open {
   transition: background 0.15s, color 0.15s;
 }
 
-.sleep-confirm-cancel:hover {
+.sleep-confirm-cancel:hover,
+.chmod-btn-cancel:hover {
   background: rgba(168, 159, 148, 0.15);
   color: var(--text-primary);
 }
 
-.sleep-confirm-ok {
+.sleep-confirm-ok,
+.chmod-btn-save {
   padding: 0.3rem 0.6rem;
   border: 1px solid rgba(218, 160, 84, 0.4);
   border-radius: 4px;
   background: rgba(218, 160, 84, 0.2);
-  color: var(--warning);
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s;
 }
 
-.sleep-confirm-ok:hover {
+.sleep-confirm-ok {
+  color: var(--warning);
+}
+
+.chmod-btn-save {
+  color: var(--accent-primary);
+}
+
+.sleep-confirm-ok:hover,
+.chmod-btn-save:hover:not(:disabled) {
   background: rgba(218, 160, 84, 0.35);
 }
 
@@ -715,33 +727,619 @@ main.panel-open {
   opacity: 0 !important;
 }
 
-/* --- Files Tab --- */
+/* --- Files Tab (File Explorer) --- */
 .files-tab {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  height: 100%;
+  margin: -1rem;
 }
 
-.files-section {
+.files-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border-color);
   background: var(--bg-card);
-  border-radius: 6px;
-  padding: 0.75rem;
-  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+  gap: 0.5rem;
 }
 
-.files-section-header {
+.files-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.files-breadcrumb-sep {
+  color: var(--text-secondary);
+  opacity: 0.5;
+  padding: 0 0.1rem;
+  flex-shrink: 0;
+}
+
+.files-breadcrumb-segment {
+  background: none;
+  border: none;
+  color: var(--accent-secondary);
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0.1rem 0.15rem;
+  border-radius: 2px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.files-breadcrumb-segment:hover {
+  color: var(--accent-primary);
+  background: rgba(218, 160, 84, 0.1);
+}
+
+.files-breadcrumb-current {
+  color: var(--text-primary);
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  padding: 0.1rem 0.15rem;
+}
+
+.files-toolbar-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.files-toolbar-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.files-toolbar-btn:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--text-secondary);
+}
+
+.files-toolbar-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.files-toolbar-btn-upload {
+  color: var(--accent-primary);
+  border-color: rgba(218, 160, 84, 0.4);
+  background: rgba(218, 160, 84, 0.1);
+}
+
+.files-toolbar-btn-upload:hover:not(:disabled) {
+  background: rgba(218, 160, 84, 0.25);
+  border-color: rgba(218, 160, 84, 0.6);
+  color: var(--accent-primary);
+}
+
+.files-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.files-row {
+  display: flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-bottom: 1px solid rgba(168, 159, 148, 0.08);
+  transition: background 0.1s;
+  gap: 0.5rem;
+  min-height: 32px;
+}
+
+.files-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.files-row-dir,
+.files-row-viewable {
+  cursor: pointer;
+}
+
+.files-row-dir:hover {
+  background: rgba(218, 160, 84, 0.08);
+}
+
+.files-icon {
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+}
+
+.files-name {
+  flex: 1;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.files-name-link {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  margin-left: 0.35rem;
+}
+
+.files-size {
+  width: 70px;
+  text-align: right;
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.files-mode {
+  width: 48px;
+  text-align: right;
+  font-family: 'Courier New', monospace;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.files-actions {
+  width: 28px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  position: relative;
+}
+
+.files-menu-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.15rem 0.3rem;
+  border-radius: 3px;
+  font-size: 0.85rem;
+  line-height: 1;
+  transition: color 0.15s, background 0.15s;
+  opacity: 0;
+  letter-spacing: 1px;
+}
+
+.files-row:hover .files-menu-btn,
+.files-menu-btn.menu-open {
+  opacity: 1;
+}
+
+.files-menu-btn:hover,
+.files-menu-btn.menu-open {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.files-menu-btn.downloading {
+  opacity: 1;
+  color: var(--warning);
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Context menu dropdown */
+.files-context-menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  right: 0;
+  min-width: 160px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.3rem 0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  z-index: 200;
+  animation: fadeInDown 0.12s ease-out;
+}
+
+.files-context-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.45rem 0.7rem;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s;
+  text-align: left;
+}
+
+.files-context-item:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.files-context-item:disabled {
+  color: var(--text-secondary);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.files-context-item-icon {
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+}
+
+/* --- Chmod Dialog --- */
+.chmod-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chmod-dialog {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  width: 320px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  animation: fadeInDown 0.15s ease-out;
+}
+
+.chmod-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.chmod-dialog-title {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.chmod-dialog-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0 0.2rem;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.chmod-dialog-close:hover {
+  color: var(--text-primary);
+}
+
+.chmod-dialog-body {
+  padding: 0.85rem;
+}
+
+.chmod-dialog-filename {
+  font-family: 'Courier New', monospace;
+  font-size: 0.78rem;
+  color: var(--accent-secondary);
+  margin-bottom: 0.75rem;
+  word-break: break-all;
+}
+
+.chmod-octal-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.chmod-octal-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.chmod-octal-input {
+  width: 70px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.3rem 0.5rem;
+  color: var(--text-primary);
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.15s;
+  text-align: center;
+}
+
+.chmod-octal-input:focus {
+  border-color: var(--accent-primary);
+}
+
+.chmod-octal-input.input-error {
+  border-color: var(--error);
+}
+
+.chmod-rwx-grid {
+  display: grid;
+  grid-template-columns: 70px repeat(3, 1fr);
+  gap: 0;
+  margin-bottom: 0.75rem;
+  font-size: 0.75rem;
+}
+
+.chmod-rwx-header {
+  text-align: center;
+  color: var(--text-secondary);
+  font-weight: 600;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.chmod-rwx-header:first-child {
+  text-align: left;
+}
+
+.chmod-rwx-row {
+  display: contents;
+}
+
+.chmod-rwx-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  padding: 0.3rem 0;
+  display: flex;
+  align-items: center;
+}
+
+.chmod-rwx-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem 0;
+}
+
+.chmod-rwx-cell input[type="checkbox"] {
+  accent-color: var(--accent-primary);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+.chmod-dialog-footer {
+  padding: 0 0.85rem 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.chmod-dialog-error {
+  flex: 1;
+  font-size: 0.75rem;
+  color: var(--error);
+}
+
+.chmod-dialog-actions {
+  display: flex;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+
+.chmod-btn-save:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* --- File Viewer --- */
+.files-viewer {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.files-viewer-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-card);
+  flex-shrink: 0;
+}
+
+.files-viewer-name {
+  flex: 1;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.files-viewer-size {
+  font-family: 'Courier New', monospace;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.files-viewer-badge {
+  display: inline-block;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.files-viewer-badge.badge-text {
+  background: rgba(109, 179, 109, 0.15);
+  color: var(--success);
+  border: 1px solid rgba(109, 179, 109, 0.3);
+}
+
+.files-viewer-badge.badge-bin {
+  background: rgba(218, 160, 84, 0.15);
+  color: var(--warning);
+  border: 1px solid rgba(218, 160, 84, 0.3);
+}
+
+.files-viewer-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.2rem 0.45rem;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+
+.files-viewer-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--text-secondary);
+}
+
+.files-viewer-content {
+  flex: 1;
+  overflow: auto;
+  padding: 0.5rem 0.75rem;
+}
+
+.files-viewer-content pre {
+  margin: 0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--text-primary);
+  white-space: pre;
+  user-select: all;
+  -webkit-user-select: all;
+}
+
+.files-viewer-error {
+  padding: 1rem;
+  color: var(--error);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+/* Root picker */
+.files-roots {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem;
+}
+
+.files-roots-title {
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
-.files-form {
+.files-root-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  color: var(--accent-secondary);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.files-root-item:hover {
+  background: rgba(218, 160, 84, 0.1);
+  border-color: rgba(218, 160, 84, 0.4);
+  color: var(--accent-primary);
+}
+
+/* Empty state */
+.files-empty {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-style: italic;
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+/* Upload feedback message */
+.files-upload-msg {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  flex-shrink: 0;
+  animation: fadeInDown 0.15s ease-out;
+}
+
+.files-upload-msg-success {
+  background: rgba(109, 179, 109, 0.1);
+  color: var(--success);
+  border-bottom: 1px solid rgba(109, 179, 109, 0.2);
+}
+
+.files-upload-msg-error {
+  background: rgba(207, 102, 121, 0.1);
+  color: var(--error);
+  border-bottom: 1px solid rgba(207, 102, 121, 0.2);
+}
+
+/* Loading overlay for file list */
+.files-loading {
   display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-style: italic;
 }
 
 /* --- Shared Panel UI --- */
@@ -817,6 +1415,10 @@ main.panel-open {
 }
 
 /* Feedback messages */
+.tab-error-wrap {
+  padding: 0.5rem 0.75rem;
+}
+
 .tab-error {
   background: rgba(207, 102, 121, 0.1);
   border: 1px solid rgba(207, 102, 121, 0.3);

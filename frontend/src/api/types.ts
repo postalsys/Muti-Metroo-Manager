@@ -164,6 +164,32 @@ export interface AgentCapabilities {
   fileTransfer: boolean | null;
 }
 
+// --- File browse types ---
+
+export interface FileBrowseEntry {
+  name: string;
+  size: number;
+  mode: string;
+  mod_time: string;
+  is_dir: boolean;
+  is_symlink?: boolean;
+  link_target?: string;
+}
+
+export interface FileBrowseListResponse {
+  path: string;
+  entries: FileBrowseEntry[];
+  total: number;
+  truncated: boolean;
+  error?: string;
+}
+
+export interface FileBrowseRootsResponse {
+  roots: string[];
+  wildcard: boolean;
+  error?: string;
+}
+
 // Shell binary protocol message types (must match internal/shell/messages.go)
 export const MSG_META    = 0x01;
 export const MSG_ACK     = 0x02;

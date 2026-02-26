@@ -7,6 +7,9 @@ import type {
   RouteManageResponse,
   ForwardManageRequest,
   ForwardManageResponse,
+  FileBrowseEntry,
+  FileBrowseListResponse,
+  FileBrowseRootsResponse,
 } from './types';
 
 const BASE = '';
@@ -121,6 +124,45 @@ export async function uploadFile(
     throw new Error(text || `Upload failed: ${resp.status}`);
   }
   return resp.json();
+}
+
+// --- File browsing ---
+
+export function browseFiles(
+  agentId: string,
+  action: 'roots',
+): Promise<FileBrowseRootsResponse>;
+export function browseFiles(
+  agentId: string,
+  action: 'list',
+  path?: string,
+  offset?: number,
+  limit?: number,
+): Promise<FileBrowseListResponse>;
+export function browseFiles(
+  agentId: string,
+  action: 'list' | 'roots',
+  path?: string,
+  offset?: number,
+  limit?: number,
+): Promise<FileBrowseListResponse | FileBrowseRootsResponse> {
+  const body: Record<string, unknown> = { action };
+  if (path !== undefined) body.path = path;
+  if (offset !== undefined) body.offset = offset;
+  if (limit !== undefined) body.limit = limit;
+  return fetchJSON(`/api/proxy/agents/${agentId}/file/browse`, 'POST', body);
+}
+
+export function chmodFile(
+  agentId: string,
+  path: string,
+  mode: string,
+): Promise<{ entry?: FileBrowseEntry; error?: string }> {
+  return fetchJSON(`/api/proxy/agents/${agentId}/file/browse`, 'POST', {
+    action: 'chmod',
+    path,
+    mode,
+  });
 }
 
 export function getSleepStatus(): Promise<SleepStatusResponse> {
