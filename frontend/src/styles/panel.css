@@ -1310,6 +1310,94 @@ main.panel-open {
   padding: 2rem 1rem;
 }
 
+/* Drag-and-drop overlay */
+.files-tab.drag-over {
+  position: relative;
+}
+
+.files-drop-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  background: rgba(218, 160, 84, 0.08);
+  border: 2px dashed rgba(218, 160, 84, 0.5);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.files-drop-overlay-text {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+  background: var(--bg-card);
+  padding: 0.5rem 1.2rem;
+  border-radius: 6px;
+  border: 1px solid rgba(218, 160, 84, 0.4);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Batch upload progress bar */
+.files-upload-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-card);
+  flex-shrink: 0;
+  animation: fadeInDown 0.15s ease-out;
+}
+
+.files-upload-progress-bar-wrap {
+  flex: 1;
+  height: 6px;
+  background: rgba(168, 159, 148, 0.15);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.files-upload-progress-bar {
+  height: 100%;
+  background: var(--accent-primary);
+  border-radius: 3px;
+  transition: width 0.2s ease-out;
+}
+
+.files-upload-progress-text {
+  font-size: 0.7rem;
+  font-family: 'Courier New', monospace;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.files-upload-progress-text .failed {
+  color: var(--error);
+}
+
+.files-upload-progress-cancel {
+  background: none;
+  border: 1px solid rgba(207, 102, 121, 0.4);
+  border-radius: 3px;
+  padding: 0.1rem 0.4rem;
+  color: var(--error);
+  font-size: 0.65rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.files-upload-progress-cancel:hover {
+  background: rgba(207, 102, 121, 0.15);
+}
+
 /* Upload feedback message */
 .files-upload-msg {
   padding: 0.4rem 0.75rem;

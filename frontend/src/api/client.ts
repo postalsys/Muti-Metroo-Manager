@@ -104,14 +104,45 @@ export async function uploadFile(
   agentId: string,
   file: File,
   remotePath: string,
+  onProgress?: (loaded: number, total: number) => void,
 ): Promise<{ status: string; message?: string }> {
   const form = new FormData();
   form.append('file', file);
   form.append('path', remotePath);
+  const url = `${BASE}/api/proxy/agents/${agentId}/file/upload`;
+  const headers = authHeaders();
 
-  const resp = await fetch(`${BASE}/api/proxy/agents/${agentId}/file/upload`, {
+  // Use XHR when progress tracking is needed
+  if (onProgress) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url);
+      for (const [k, v] of Object.entries(headers)) xhr.setRequestHeader(k, v);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress(e.loaded, e.total);
+      };
+      xhr.onload = () => {
+        if (xhr.status === 401) {
+          clearToken();
+          window.dispatchEvent(new CustomEvent('auth-required'));
+          reject(new Error('Authentication required'));
+          return;
+        }
+        if (xhr.status < 200 || xhr.status >= 300) {
+          reject(new Error(xhr.responseText || `Upload failed: ${xhr.status}`));
+          return;
+        }
+        try { resolve(JSON.parse(xhr.responseText)); }
+        catch { resolve({ status: 'ok' }); }
+      };
+      xhr.onerror = () => reject(new Error('Upload failed: network error'));
+      xhr.send(form);
+    });
+  }
+
+  const resp = await fetch(url, {
     method: 'POST',
-    headers: { ...authHeaders() },
+    headers,
     body: form,
   });
   if (resp.status === 401) {

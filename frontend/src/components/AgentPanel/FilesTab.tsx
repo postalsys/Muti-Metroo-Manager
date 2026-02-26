@@ -70,6 +70,55 @@ function entryIcon(entry: FileBrowseEntry): string {
   return '\u{1F4C4}';
 }
 
+/** Recursively collect files from DataTransferItemList (supports folders via webkitGetAsEntry) */
+async function collectDroppedFiles(items: DataTransferItemList): Promise<{ file: File; relativePath: string }[]> {
+  const result: { file: File; relativePath: string }[] = [];
+
+  function readEntries(reader: FileSystemDirectoryReader): Promise<FileSystemEntry[]> {
+    return new Promise((resolve, reject) => reader.readEntries(resolve, reject));
+  }
+
+  function fileFromEntry(entry: FileSystemFileEntry): Promise<File> {
+    return new Promise((resolve, reject) => entry.file(resolve, reject));
+  }
+
+  async function walk(entry: FileSystemEntry, prefix: string) {
+    if (entry.isFile) {
+      const file = await fileFromEntry(entry as FileSystemFileEntry);
+      result.push({ file, relativePath: prefix + entry.name });
+    } else if (entry.isDirectory) {
+      const reader = (entry as FileSystemDirectoryEntry).createReader();
+      const dirPrefix = prefix + entry.name + '/';
+      // Chrome batches at 100 — loop until empty
+      let batch: FileSystemEntry[];
+      do {
+        batch = await readEntries(reader);
+        for (const child of batch) {
+          await walk(child, dirPrefix);
+        }
+      } while (batch.length > 0);
+    }
+  }
+
+  const entries: FileSystemEntry[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const entry = items[i].webkitGetAsEntry?.();
+    if (entry) {
+      entries.push(entry);
+    } else {
+      // Fallback: no webkitGetAsEntry support
+      const file = items[i].getAsFile();
+      if (file) result.push({ file, relativePath: file.name });
+    }
+  }
+
+  for (const entry of entries) {
+    await walk(entry, '');
+  }
+
+  return result;
+}
+
 /** Join a directory path with a filename */
 function joinPath(dir: string, name: string): string {
   return dir.endsWith('/') ? dir + name : dir + '/' + name;
@@ -144,6 +193,15 @@ export default function FilesTab({ agent, disabled, onDisabled }: FilesTabProps)
   const [chmodValue, setChmodValue] = useState('');
   const [chmodSaving, setChmodSaving] = useState(false);
   const [chmodError, setChmodError] = useState<string | null>(null);
+  // Drag-and-drop state
+  const [dragOver, setDragOver] = useState(false);
+  const [uploadQueue, setUploadQueue] = useState<{ file: File; remotePath: string }[] | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{
+    totalFiles: number; doneFiles: number; failed: number;
+    totalBytes: number; uploadedBytes: number; currentName: string;
+  } | null>(null);
+  const dragCounter = useRef(0);
+  const uploadCancelledRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadMsgTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const onDisabledRef = useRef(onDisabled);
@@ -261,6 +319,104 @@ export default function FilesTab({ agent, disabled, onDisabled }: FilesTabProps)
       uploadMsgTimer.current = setTimeout(() => setUploadMsg(null), 4000);
     }
   }, [agent.id, currentPath, checkFileTransferDenied, doRefresh]);
+
+  // Batch upload effect — processes uploadQueue sequentially with byte-level progress
+  useEffect(() => {
+    if (!uploadQueue || uploadQueue.length === 0) return;
+    uploadCancelledRef.current = false;
+    let active = true;
+
+    (async () => {
+      const totalFiles = uploadQueue.length;
+      const totalBytes = uploadQueue.reduce((sum, item) => sum + item.file.size, 0);
+      let doneFiles = 0;
+      let failed = 0;
+      let completedBytes = 0;
+
+      setUploadProgress({ totalFiles, doneFiles: 0, failed: 0, totalBytes, uploadedBytes: 0, currentName: uploadQueue[0].file.name });
+
+      for (const item of uploadQueue) {
+        if (!active || uploadCancelledRef.current) break;
+        const baseBytes = completedBytes;
+        setUploadProgress({ totalFiles, doneFiles, failed, totalBytes, uploadedBytes: baseBytes, currentName: item.file.name });
+        try {
+          await uploadFile(agent.id, item.file, item.remotePath, (loaded) => {
+            if (!active) return;
+            setUploadProgress({ totalFiles, doneFiles, failed, totalBytes, uploadedBytes: baseBytes + loaded, currentName: item.file.name });
+          });
+        } catch {
+          failed++;
+        }
+        completedBytes += item.file.size;
+        doneFiles++;
+      }
+
+      if (!active) return;
+      const cancelled = uploadCancelledRef.current;
+      const skipped = totalFiles - doneFiles;
+
+      setUploadProgress(null);
+      setUploadQueue(null);
+      doRefresh();
+
+      let text: string;
+      if (cancelled) {
+        text = `Uploaded ${doneFiles - failed} of ${totalFiles} (${skipped} skipped${failed > 0 ? `, ${failed} failed` : ''})`;
+      } else if (failed > 0) {
+        text = `Uploaded ${doneFiles - failed} of ${totalFiles} (${failed} failed)`;
+      } else {
+        text = `Uploaded ${doneFiles} file${doneFiles !== 1 ? 's' : ''}`;
+      }
+      setUploadMsg({ type: failed > 0 || cancelled ? 'error' : 'success', text });
+      clearTimeout(uploadMsgTimer.current);
+      uploadMsgTimer.current = setTimeout(() => setUploadMsg(null), 4000);
+    })();
+
+    return () => { active = false; };
+  }, [uploadQueue, agent.id, doRefresh]);
+
+  // Drag event handlers
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current++;
+    if (dragCounter.current === 1) setDragOver(true);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0;
+      setDragOver(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current = 0;
+    setDragOver(false);
+    if (!currentPath || uploadQueue) return; // already uploading
+
+    const items = e.dataTransfer.items;
+    if (!items || items.length === 0) return;
+
+    const files = await collectDroppedFiles(items);
+    if (files.length === 0) return;
+
+    const queue = files.map(f => ({
+      file: f.file,
+      remotePath: joinPath(currentPath, f.relativePath),
+    }));
+    setUploadQueue(queue);
+  }, [currentPath, uploadQueue]);
 
   const handleView = useCallback(async (fullPath: string, name: string, size: number) => {
     setViewingFile({ path: fullPath, name, size });
@@ -413,8 +569,21 @@ export default function FilesTab({ agent, disabled, onDisabled }: FilesTabProps)
 
   const entryFullPath = (entry: FileBrowseEntry) => joinPath(currentPath!, entry.name);
 
+  const showDropOverlay = dragOver && !viewingFile && roots === null;
+
   return (
-    <div className="files-tab">
+    <div
+      className={`files-tab${showDropOverlay ? ' drag-over' : ''}`}
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {showDropOverlay && (
+        <div className="files-drop-overlay">
+          <div className="files-drop-overlay-text">Drop files to upload</div>
+        </div>
+      )}
       {/* Toolbar with breadcrumb and actions */}
       <div className="files-toolbar">
         <div className="files-breadcrumb">
@@ -438,24 +607,58 @@ export default function FilesTab({ agent, disabled, onDisabled }: FilesTabProps)
           <input
             ref={fileInputRef}
             type="file"
+            multiple
             style={{ display: 'none' }}
             onChange={e => {
-              const f = e.target.files?.[0];
-              if (f) handleUpload(f);
+              const files = e.target.files;
+              if (!files || files.length === 0 || !currentPath) return;
+              if (files.length === 1) {
+                handleUpload(files[0]);
+              } else {
+                const queue = Array.from(files).map(f => ({
+                  file: f,
+                  remotePath: joinPath(currentPath, f.name),
+                }));
+                setUploadQueue(queue);
+              }
+              if (fileInputRef.current) fileInputRef.current.value = '';
             }}
           />
           <button
             className="files-toolbar-btn files-toolbar-btn-upload"
             onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
+            disabled={uploading || uploadQueue !== null}
           >
-            {uploading ? 'Uploading...' : 'Upload'}
+            {uploading || uploadQueue !== null ? 'Uploading...' : 'Upload'}
           </button>
           <button className="files-toolbar-btn" onClick={doRefresh} disabled={loading}>
             Refresh
           </button>
         </div>
       </div>
+
+      {/* Batch upload progress */}
+      {uploadProgress && (
+        <div className="files-upload-progress">
+          <div className="files-upload-progress-bar-wrap">
+            <div
+              className="files-upload-progress-bar"
+              style={{ width: `${uploadProgress.totalBytes > 0 ? (uploadProgress.uploadedBytes / uploadProgress.totalBytes) * 100 : 0}%` }}
+            />
+          </div>
+          <span className="files-upload-progress-text">
+            {uploadProgress.doneFiles}/{uploadProgress.totalFiles}
+            {uploadProgress.failed > 0 && <span className="failed"> ({uploadProgress.failed} failed)</span>}
+            {' \u2014 '}{uploadProgress.currentName}
+          </span>
+          <button
+            className="files-upload-progress-cancel"
+            onClick={() => { uploadCancelledRef.current = true; }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {viewingFile ? (
         /* File viewer */
