@@ -196,6 +196,18 @@ export function chmodFile(
   });
 }
 
+export function deleteFile(
+  agentId: string,
+  path: string,
+  recursive: boolean,
+): Promise<{ entry?: FileBrowseEntry; error?: string }> {
+  return fetchJSON(`/api/proxy/agents/${agentId}/file/browse`, 'POST', {
+    action: 'delete',
+    path,
+    recursive,
+  });
+}
+
 export function getSleepStatus(): Promise<SleepStatusResponse> {
   return fetchJSON('/api/proxy/sleep/status');
 }

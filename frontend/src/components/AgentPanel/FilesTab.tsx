@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { TopologyAgentInfo, FileBrowseEntry } from '../../api/types';
 import { ERR_FILE_TRANSFER_DENIED } from '../../api/types';
-import { browseFiles, downloadFile, uploadFile, chmodFile } from '../../api/client';
+import { browseFiles, downloadFile, uploadFile, chmodFile, deleteFile } from '../../api/client';
 
 const VIEW_MAX_SIZE = 1024 * 1024; // 1MB
 
@@ -172,6 +172,47 @@ function bitsToMode(bits: boolean[][], original: number): number {
   return m;
 }
 
+interface UploadProgress {
+  totalFiles: number;
+  doneFiles: number;
+  failed: number;
+  totalBytes: number;
+  uploadedBytes: number;
+  currentName: string;
+}
+
+interface UploadProgressBarProps {
+  progress: UploadProgress;
+  onCancel: () => void;
+}
+
+function UploadProgressBar({ progress, onCancel }: UploadProgressBarProps) {
+  const pct = progress.totalBytes > 0
+    ? Math.round((progress.uploadedBytes / progress.totalBytes) * 100)
+    : 0;
+
+  return (
+    <div className="files-upload-progress">
+      <div className="files-upload-progress-bar-wrap">
+        <div className="files-upload-progress-bar" style={{ width: `${pct}%` }} />
+      </div>
+      <div className="files-upload-progress-info">
+        <span className="files-upload-progress-text">
+          {progress.doneFiles}/{progress.totalFiles}
+          {progress.failed > 0 && <span className="failed"> ({progress.failed} failed)</span>}
+          {' \u2014 '}{progress.currentName}
+        </span>
+        <span className="files-upload-progress-bytes">
+          {pct}% {formatSize(progress.uploadedBytes)}/{formatSize(progress.totalBytes)}
+        </span>
+        <button className="files-upload-progress-cancel" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function FilesTab({ agent, disabled, onDisabled }: FilesTabProps) {
   const [currentPath, setCurrentPath] = useState<string | null>(null);
   const [entries, setEntries] = useState<FileBrowseEntry[]>([]);
@@ -193,13 +234,14 @@ export default function FilesTab({ agent, disabled, onDisabled }: FilesTabProps)
   const [chmodValue, setChmodValue] = useState('');
   const [chmodSaving, setChmodSaving] = useState(false);
   const [chmodError, setChmodError] = useState<string | null>(null);
+  // Delete dialog state
+  const [deleteTarget, setDeleteTarget] = useState<{ path: string; name: string; isDir: boolean } | null>(null);
+  const [deleteDeleting, setDeleteDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   // Drag-and-drop state
   const [dragOver, setDragOver] = useState(false);
   const [uploadQueue, setUploadQueue] = useState<{ file: File; remotePath: string }[] | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<{
-    totalFiles: number; doneFiles: number; failed: number;
-    totalBytes: number; uploadedBytes: number; currentName: string;
-  } | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const dragCounter = useRef(0);
   const uploadCancelledRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -464,12 +506,14 @@ export default function FilesTab({ agent, disabled, onDisabled }: FilesTabProps)
     };
   }, [menuOpenPath]);
 
-  // Escape key closes viewer or chmod dialog
+  // Escape key closes viewer, chmod dialog, or delete dialog
   useEffect(() => {
-    if (!viewingFile && !chmodTarget) return;
+    if (!viewingFile && !chmodTarget && !deleteTarget) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (chmodTarget) {
+        if (deleteTarget) {
+          setDeleteTarget(null);
+        } else if (chmodTarget) {
           setChmodTarget(null);
         } else {
           closeViewer();
@@ -478,7 +522,7 @@ export default function FilesTab({ agent, disabled, onDisabled }: FilesTabProps)
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [viewingFile, chmodTarget, closeViewer]);
+  }, [viewingFile, chmodTarget, deleteTarget, closeViewer]);
 
   // Open chmod dialog
   const openChmod = useCallback((path: string, name: string, mode: string) => {
@@ -519,6 +563,37 @@ export default function FilesTab({ agent, disabled, onDisabled }: FilesTabProps)
       setChmodSaving(false);
     }
   }, [agent.id, chmodTarget, chmodValue, currentPath, checkFileTransferDenied]);
+
+  // Open delete dialog
+  const openDelete = useCallback((path: string, name: string, isDir: boolean) => {
+    setDeleteTarget({ path, name, isDir });
+    setDeleteError(null);
+    setDeleteDeleting(false);
+  }, []);
+
+  // Handle delete
+  const handleDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    setDeleteDeleting(true);
+    setDeleteError(null);
+    try {
+      const resp = await deleteFile(agent.id, deleteTarget.path, deleteTarget.isDir);
+      if (resp.error) {
+        setDeleteError(resp.error);
+        return;
+      }
+      setDeleteTarget(null);
+      setEntries(prev => prev.filter(e => joinPath(currentPath!, e.name) !== deleteTarget.path));
+      setUploadMsg({ type: 'success', text: `Deleted ${deleteTarget.name}` });
+      clearTimeout(uploadMsgTimer.current);
+      uploadMsgTimer.current = setTimeout(() => setUploadMsg(null), 4000);
+    } catch (err: any) {
+      setDeleteError(err.message || 'Delete failed');
+      checkFileTransferDenied(err);
+    } finally {
+      setDeleteDeleting(false);
+    }
+  }, [agent.id, deleteTarget, currentPath, checkFileTransferDenied]);
 
   // Derive rwx bits from chmodValue for the checkbox grid
   const chmodParsed = parseOctalMode(chmodValue);
@@ -638,27 +713,7 @@ export default function FilesTab({ agent, disabled, onDisabled }: FilesTabProps)
       </div>
 
       {/* Batch upload progress */}
-      {uploadProgress && (
-        <div className="files-upload-progress">
-          <div className="files-upload-progress-bar-wrap">
-            <div
-              className="files-upload-progress-bar"
-              style={{ width: `${uploadProgress.totalBytes > 0 ? (uploadProgress.uploadedBytes / uploadProgress.totalBytes) * 100 : 0}%` }}
-            />
-          </div>
-          <span className="files-upload-progress-text">
-            {uploadProgress.doneFiles}/{uploadProgress.totalFiles}
-            {uploadProgress.failed > 0 && <span className="failed"> ({uploadProgress.failed} failed)</span>}
-            {' \u2014 '}{uploadProgress.currentName}
-          </span>
-          <button
-            className="files-upload-progress-cancel"
-            onClick={() => { uploadCancelledRef.current = true; }}
-          >
-            Cancel
-          </button>
-        </div>
-      )}
+      {uploadProgress && <UploadProgressBar progress={uploadProgress} onCancel={() => { uploadCancelledRef.current = true; }} />}
 
       {viewingFile ? (
         /* File viewer */
@@ -796,6 +851,16 @@ export default function FilesTab({ agent, disabled, onDisabled }: FilesTabProps)
                             <span className="files-context-item-icon">&#x1F512;</span>
                             Permissions
                           </button>
+                          <button
+                            className="files-context-item files-context-item-danger"
+                            onClick={() => {
+                              setMenuOpenPath(null);
+                              openDelete(fullPath, entry.name, entry.is_dir);
+                            }}
+                          >
+                            <span className="files-context-item-icon">&#x2715;</span>
+                            Delete
+                          </button>
                         </div>
                       )}
                     </span>
@@ -805,6 +870,43 @@ export default function FilesTab({ agent, disabled, onDisabled }: FilesTabProps)
             </div>
           )}
         </>
+      )}
+
+      {/* Delete confirmation dialog */}
+      {deleteTarget && (
+        <div className="delete-dialog-overlay" onClick={() => setDeleteTarget(null)}>
+          <div className="delete-dialog" onClick={e => e.stopPropagation()}>
+            <div className="delete-dialog-header">
+              <span className="delete-dialog-title">{deleteTarget.isDir ? 'Delete Folder' : 'Delete File'}</span>
+              <button className="delete-dialog-close" onClick={() => setDeleteTarget(null)}>&#x2715;</button>
+            </div>
+            <div className="delete-dialog-body">
+              <div className="delete-dialog-filename">{deleteTarget.name}</div>
+              {deleteTarget.isDir ? (
+                <div className="delete-dialog-warning-recursive">
+                  Are you sure you want to delete this folder and all its contents?
+                </div>
+              ) : (
+                <div className="delete-dialog-warning">
+                  Are you sure you want to delete this file?
+                </div>
+              )}
+            </div>
+            <div className="delete-dialog-footer">
+              {deleteError && <span className="delete-dialog-error">{deleteError}</span>}
+              <div className="delete-dialog-actions">
+                <button className="delete-btn-cancel" onClick={() => setDeleteTarget(null)}>Cancel</button>
+                <button
+                  className="delete-btn-confirm"
+                  disabled={deleteDeleting}
+                  onClick={handleDelete}
+                >
+                  {deleteDeleting ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Chmod dialog */}

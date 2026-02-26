@@ -212,9 +212,10 @@ main.panel-open {
   justify-content: flex-end;
 }
 
-/* Shared dialog button styles (used by sleep confirm, chmod dialog) */
+/* Shared dialog button styles (used by sleep confirm, chmod dialog, delete dialog) */
 .sleep-confirm-cancel,
-.chmod-btn-cancel {
+.chmod-btn-cancel,
+.delete-btn-cancel {
   padding: 0.3rem 0.6rem;
   border: 1px solid var(--border-color);
   border-radius: 4px;
@@ -227,7 +228,8 @@ main.panel-open {
 }
 
 .sleep-confirm-cancel:hover,
-.chmod-btn-cancel:hover {
+.chmod-btn-cancel:hover,
+.delete-btn-cancel:hover {
   background: rgba(168, 159, 148, 0.15);
   color: var(--text-primary);
 }
@@ -994,8 +996,18 @@ main.panel-open {
   font-size: 0.8rem;
 }
 
-/* --- Chmod Dialog --- */
-.chmod-dialog-overlay {
+/* Context menu danger item (delete) */
+.files-context-item-danger {
+  color: var(--error);
+}
+
+.files-context-item-danger:hover:not(:disabled) {
+  background: rgba(207, 102, 121, 0.1);
+}
+
+/* --- Shared Dialog (chmod + delete) --- */
+.chmod-dialog-overlay,
+.delete-dialog-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
@@ -1005,7 +1017,8 @@ main.panel-open {
   justify-content: center;
 }
 
-.chmod-dialog {
+.chmod-dialog,
+.delete-dialog {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -1014,7 +1027,8 @@ main.panel-open {
   animation: fadeInDown 0.15s ease-out;
 }
 
-.chmod-dialog-header {
+.chmod-dialog-header,
+.delete-dialog-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1022,13 +1036,19 @@ main.panel-open {
   border-bottom: 1px solid var(--border-color);
 }
 
-.chmod-dialog-title {
+.chmod-dialog-title,
+.delete-dialog-title {
   font-weight: 700;
   font-size: 0.85rem;
   color: var(--text-primary);
 }
 
-.chmod-dialog-close {
+.delete-dialog-title {
+  color: var(--error);
+}
+
+.chmod-dialog-close,
+.delete-dialog-close {
   background: none;
   border: none;
   color: var(--text-secondary);
@@ -1039,15 +1059,18 @@ main.panel-open {
   transition: color 0.15s;
 }
 
-.chmod-dialog-close:hover {
+.chmod-dialog-close:hover,
+.delete-dialog-close:hover {
   color: var(--text-primary);
 }
 
-.chmod-dialog-body {
+.chmod-dialog-body,
+.delete-dialog-body {
   padding: 0.85rem;
 }
 
-.chmod-dialog-filename {
+.chmod-dialog-filename,
+.delete-dialog-filename {
   font-family: 'Courier New', monospace;
   font-size: 0.78rem;
   color: var(--accent-secondary);
@@ -1140,28 +1163,62 @@ main.panel-open {
   cursor: pointer;
 }
 
-.chmod-dialog-footer {
+.chmod-dialog-footer,
+.delete-dialog-footer {
   padding: 0 0.85rem 0.85rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.chmod-dialog-error {
+.chmod-dialog-error,
+.delete-dialog-error {
   flex: 1;
   font-size: 0.75rem;
   color: var(--error);
 }
 
-.chmod-dialog-actions {
+.chmod-dialog-actions,
+.delete-dialog-actions {
   display: flex;
   gap: 0.35rem;
   margin-left: auto;
 }
 
-.chmod-btn-save:disabled {
+.chmod-btn-save:disabled,
+.delete-btn-confirm:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* --- Delete Dialog (overrides for shared dialog) --- */
+.delete-dialog-warning {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.delete-dialog-warning-recursive {
+  font-size: 0.78rem;
+  color: var(--error);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.delete-btn-confirm {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid rgba(207, 102, 121, 0.4);
+  border-radius: 4px;
+  background: rgba(207, 102, 121, 0.2);
+  color: var(--error);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.delete-btn-confirm:hover:not(:disabled) {
+  background: rgba(207, 102, 121, 0.35);
 }
 
 /* --- File Viewer --- */
@@ -1342,8 +1399,8 @@ main.panel-open {
 /* Batch upload progress bar */
 .files-upload-progress {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.3rem;
   padding: 0.4rem 0.75rem;
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-card);
@@ -1352,7 +1409,7 @@ main.panel-open {
 }
 
 .files-upload-progress-bar-wrap {
-  flex: 1;
+  width: 100%;
   height: 6px;
   background: rgba(168, 159, 148, 0.15);
   border-radius: 3px;
@@ -1366,19 +1423,30 @@ main.panel-open {
   transition: width 0.2s ease-out;
 }
 
-.files-upload-progress-text {
-  font-size: 0.7rem;
+.files-upload-progress-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   font-family: 'Courier New', monospace;
   color: var(--text-secondary);
   white-space: nowrap;
-  flex-shrink: 0;
-  max-width: 200px;
+}
+
+.files-upload-progress-text {
+  font-size: 0.7rem;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .files-upload-progress-text .failed {
   color: var(--error);
+}
+
+.files-upload-progress-bytes {
+  font-size: 0.65rem;
+  flex-shrink: 0;
 }
 
 .files-upload-progress-cancel {
