@@ -1,19 +1,22 @@
 import { useState } from 'react';
 
 interface TokenDialogProps {
-  onSubmit: (token: string) => void;
+  onSubmit: (token: string) => Promise<void>;
 }
 
 export default function TokenDialog({ onSubmit }: TokenDialogProps) {
   const [value, setValue] = useState('');
   const [error, setError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [validating, setValidating] = useState(false);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setValue(e.target.value);
     setError(false);
+    setErrorMessage('');
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = value.trim();
     if (!trimmed) {
@@ -21,7 +24,16 @@ export default function TokenDialog({ onSubmit }: TokenDialogProps) {
       return;
     }
     setError(false);
-    onSubmit(trimmed);
+    setErrorMessage('');
+    setValidating(true);
+    try {
+      await onSubmit(trimmed);
+    } catch {
+      setError(true);
+      setErrorMessage('Invalid token');
+    } finally {
+      setValidating(false);
+    }
   }
 
   return (
@@ -37,13 +49,15 @@ export default function TokenDialog({ onSubmit }: TokenDialogProps) {
             placeholder="Bearer token"
             value={value}
             onChange={handleChange}
+            disabled={validating}
             autoFocus
             autoComplete="current-password"
           />
+          {errorMessage && <p className="token-dialog-error">{errorMessage}</p>}
         </div>
         <div className="token-dialog-footer">
-          <button type="submit" className="panel-btn token-dialog-btn">
-            Authenticate
+          <button type="submit" className="panel-btn token-dialog-btn" disabled={validating}>
+            {validating ? 'Validating...' : 'Authenticate'}
           </button>
         </div>
       </form>
