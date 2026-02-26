@@ -68,7 +68,7 @@ export default function AgentPanel({ agent, isActive, meshResult, capabilities, 
     setSaving(true);
     setRenameError(null);
     try {
-      await renameAgent(agent.short_id, agent.is_local, trimmed);
+      await renameAgent(agent.id, agent.is_local, trimmed);
       setOverrideName(trimmed);
       setIsEditing(false);
     } catch (err) {
