@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 
 interface TokenDialogProps {
   onSubmit: (token: string) => void;
@@ -8,7 +8,12 @@ export default function TokenDialog({ onSubmit }: TokenDialogProps) {
   const [value, setValue] = useState('');
   const [error, setError] = useState(false);
 
-  const handleSubmit = useCallback((e: React.FormEvent) => {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setValue(e.target.value);
+    setError(false);
+  }
+
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = value.trim();
     if (!trimmed) {
@@ -17,7 +22,7 @@ export default function TokenDialog({ onSubmit }: TokenDialogProps) {
     }
     setError(false);
     onSubmit(trimmed);
-  }, [value, onSubmit]);
+  }
 
   return (
     <div className="token-dialog-overlay">
@@ -28,10 +33,12 @@ export default function TokenDialog({ onSubmit }: TokenDialogProps) {
           <input
             className={`panel-input token-dialog-input${error ? ' input-error' : ''}`}
             type="password"
+            name="token"
             placeholder="Bearer token"
             value={value}
-            onChange={e => { setValue(e.target.value); setError(false); }}
+            onChange={handleChange}
             autoFocus
+            autoComplete="current-password"
           />
         </div>
         <div className="token-dialog-footer">
