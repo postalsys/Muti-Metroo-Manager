@@ -22,9 +22,13 @@ func (p *Proxy) handleWebSocket(w http.ResponseWriter, r *http.Request, agentPat
 		targetURL += "?" + r.URL.RawQuery
 	}
 
+	// Forward subprotocols from client request
+	clientSubprotocols := websocket.Subprotocols(r)
+
 	// Dial agent
 	dialer := websocket.Dialer{
 		TLSClientConfig: p.client.Transport.(*http.Transport).TLSClientConfig,
+		Subprotocols:    clientSubprotocols,
 	}
 	var dialHeaders http.Header
 	if p.agentToken != "" {
@@ -42,8 +46,12 @@ func (p *Proxy) handleWebSocket(w http.ResponseWriter, r *http.Request, agentPat
 	}
 	defer agentConn.Close()
 
-	// Upgrade client connection
-	clientConn, err := upgrader.Upgrade(w, r, nil)
+	// Upgrade client connection, echoing the subprotocol negotiated with the agent
+	respHeader := http.Header{}
+	if negotiated := agentConn.Subprotocol(); negotiated != "" {
+		respHeader.Set("Sec-WebSocket-Protocol", negotiated)
+	}
+	clientConn, err := upgrader.Upgrade(w, r, respHeader)
 	if err != nil {
 		return
 	}

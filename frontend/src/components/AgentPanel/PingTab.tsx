@@ -17,18 +17,24 @@ interface PingTabProps {
 const MAX_RESULTS = 100;
 const PING_INTERVAL = 1000;
 const PING_TIMEOUT = 6000;
+const COUNT_OPTIONS = [10, 25, 50, 0] as const; // 0 = unlimited
 
 type PingStatus = 'idle' | 'connecting' | 'running' | 'stopped' | 'error';
 
 export default function PingTab({ agent, onDisabled }: PingTabProps) {
   const [targetInput, setTargetInput] = useState('');
+  const [pingCount, setPingCount] = useState(10);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [activeTarget, setActiveTarget] = useState<string | null>(null);
   const [status, setStatus] = useState<PingStatus>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [sourceIp, setSourceIp] = useState<string | null>(null);
+  const [destIp, setDestIp] = useState<string | null>(null);
   const [results, setResults] = useState<PingResult[]>([]);
 
   const wsRef = useRef<WebSocket | null>(null);
   const seqRef = useRef(0);
+  const countRef = useRef(pingCount);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutsRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
   const stoppedRef = useRef(false);
@@ -65,6 +71,8 @@ export default function PingTab({ agent, onDisabled }: PingTabProps) {
     seqRef.current = 0;
     setResults([]);
     setErrorMsg('');
+    setSourceIp(null);
+    setDestIp(activeTarget);
     setStatus('connecting');
 
     const ws = new WebSocket(getPingWebSocketURL(agent.id), 'muti-icmp');
@@ -75,7 +83,7 @@ export default function PingTab({ agent, onDisabled }: PingTabProps) {
     };
 
     ws.onmessage = (ev) => {
-      let msg: { type: string; success?: boolean; error?: string; sequence?: number };
+      let msg: { type: string; success?: boolean; error?: string; sequence?: number; src_ip?: string };
       try {
         msg = JSON.parse(ev.data);
       } catch {
@@ -103,6 +111,21 @@ export default function PingTab({ agent, onDisabled }: PingTabProps) {
               ));
             }, PING_TIMEOUT);
             timeoutsRef.current.set(seq, tid);
+            // Auto-stop after reaching count (0 = unlimited)
+            if (countRef.current > 0 && seq >= countRef.current) {
+              clearInterval(intervalRef.current!);
+              intervalRef.current = null;
+              stoppedRef.current = true;
+              setStatus('stopped');
+              // Close WS after allowing time for last replies
+              setTimeout(() => {
+                if (wsRef.current) {
+                  wsRef.current.close();
+                  wsRef.current = null;
+                }
+                setActiveTarget(null);
+              }, PING_TIMEOUT + 500);
+            }
           }, PING_INTERVAL);
         } else {
           const err = msg.error || 'Init failed';
@@ -120,6 +143,7 @@ export default function PingTab({ agent, onDisabled }: PingTabProps) {
         const seq = msg.sequence;
         clearSeqTimeout(seq);
         const now = Date.now();
+        if (msg.src_ip) setSourceIp(prev => prev ?? msg.src_ip!);
         setResults(prev => prev.map(r =>
           r.sequence === seq ? { ...r, rttMs: now - r.sendTime } : r
         ));
@@ -164,8 +188,9 @@ export default function PingTab({ agent, onDisabled }: PingTabProps) {
   const handleStart = useCallback(() => {
     const target = targetInput.trim();
     if (!target) return;
+    countRef.current = pingCount;
     setActiveTarget(target);
-  }, [targetInput]);
+  }, [targetInput, pingCount]);
 
   const handleStop = useCallback(() => {
     stoppedRef.current = true;
@@ -201,10 +226,41 @@ export default function PingTab({ agent, onDisabled }: PingTabProps) {
           onKeyDown={handleKeyDown}
           disabled={isRunning}
         />
+        <select
+          className="panel-input ping-count-select"
+          value={pingCount}
+          onChange={e => setPingCount(Number(e.target.value))}
+          disabled={isRunning}
+        >
+          {COUNT_OPTIONS.map(n => (
+            <option key={n} value={n}>{n === 0 ? '\u221E' : n}</option>
+          ))}
+        </select>
         {isRunning ? (
           <button className="panel-btn panel-btn-danger ping-stop-btn" onClick={handleStop}>Stop</button>
         ) : (
           <button className="panel-btn" onClick={handleStart} disabled={!targetInput.trim()}>Start</button>
+        )}
+      </div>
+
+      <div className="ping-info">
+        <button className="ping-info-toggle" onClick={() => setInfoOpen(v => !v)}>
+          <span className={`ping-info-arrow${infoOpen ? ' open' : ''}`}>&#9654;</span>
+          Unprivileged ICMP
+        </button>
+        {infoOpen && (
+          <div className="ping-info-body">
+            The agent uses unprivileged ICMP sockets (no root required). The kernel
+            handles echo requests via UDP-based datagram sockets, which means:
+            <ul>
+              <li>Only ICMP Echo (ping) is supported — no traceroute or other ICMP types</li>
+              <li>The kernel assigns ICMP identifiers, not the agent</li>
+              <li>Source IP in replies reflects the remote host, not the local outbound interface</li>
+              <li>Requires <code>net.ipv4.ping_group_range</code> sysctl to include the agent's GID on Linux</li>
+            </ul>
+            RTT is measured end-to-end from the manager through the mesh to the exit
+            node and back — it includes mesh latency, not just network latency to the target.
+          </div>
         )}
       </div>
 
@@ -246,6 +302,18 @@ export default function PingTab({ agent, onDisabled }: PingTabProps) {
             <span className="ping-stat-label">Loss</span>
             <span className={`ping-stat-value${lossPercent > 0 ? ' ping-stat-loss' : ''}`}>{lossPercent.toFixed(0)}%</span>
           </div>
+          {destIp && (
+            <div className="ping-stat-ips">
+              <div className="ping-stat-ip">
+                <span className="ping-stat-label">Source</span>
+                <span className="ping-stat-value">{sourceIp || '\u2014'}</span>
+              </div>
+              <div className="ping-stat-ip">
+                <span className="ping-stat-label">Dest</span>
+                <span className="ping-stat-value">{destIp}</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
