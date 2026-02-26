@@ -105,7 +105,7 @@ export default function AgentPanel({ agent, isActive, meshResult, capabilities, 
     { id: 'forwards', label: 'Forwards', disabled: false },
     { id: 'shell', label: 'Shell', disabled: capabilities.shell === false || agent.shell_enabled !== true },
     { id: 'files', label: 'Files', disabled: capabilities.fileTransfer === false || !agent.file_transfer_enabled },
-    { id: 'ping', label: 'Ping', disabled: capabilities.icmp === false },
+    { id: 'ping', label: 'Ping', disabled: capabilities.icmp === false || agent.os === 'windows' },
   ];
 
   const displayName = overrideName ?? agent.display_name ?? agent.short_id;
